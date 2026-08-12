@@ -10,6 +10,14 @@
         "SLAM_BUILD_TESTS": "ON",
         "SLAM_BUILD_APPS": "ON"
       }
+    },
+    {
+      "name": "with-viz",
+      "inherits": "default",
+      "cacheVariables": {
+        "VCPKG_MANIFEST_FEATURES": "viz",
+        "SLAM_BUILD_VIZ": "ON"
+      }
     }
   ]
 }

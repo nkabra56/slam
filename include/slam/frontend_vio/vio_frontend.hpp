@@ -39,6 +39,16 @@ class VioFrontend {
   FrameResult ProcessStereoFrame(const StereoFrame& frame);
   void ProcessImu(const ImuMeasurement& measurement);
 
+  // Landmarks triangulated from the most recently processed stereo pair,
+  // in that frame's local camera coordinates -- exposed so callers (e.g.
+  // the Phase 4 mapping module) can accumulate a world-frame map without
+  // re-triangulating. Track IDs are only stable across short local tracks
+  // (FeatureTracker reassigns them as features are lost/replenished), so
+  // this isn't a long-lived landmark identity, just this frame's points.
+  const std::unordered_map<TrackId, Eigen::Vector3d>& LastLandmarks() const {
+    return previous_landmarks_;
+  }
+
  private:
   std::unordered_map<TrackId, Eigen::Vector3d> TriangulateTracks(
       const cv::Mat& left, const cv::Mat& right,

@@ -11,5 +11,11 @@
     },
     "gtest",
     "pybind11"
-  ]
+  ],
+  "features": {
+    "viz": {
+      "description": "Pangolin live trajectory/map viewer (SLAM_BUILD_VIZ). Requires OpenGL/X11 dev libraries on Linux, e.g. libgl1-mesa-dev + X11 headers -- not installed by CI, opt in locally with --x-feature=viz.",
+      "dependencies": ["pangolin"]
+    }
+  }
 }

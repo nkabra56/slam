@@ -1,2 +1,5 @@
 add_executable(slam_kitti_demo main_kitti_demo.cpp)
 target_link_libraries(slam_kitti_demo PRIVATE slam_core)
+
+add_executable(slam_vio_demo main_vio_demo.cpp)
+target_link_libraries(slam_vio_demo PRIVATE slam_core)

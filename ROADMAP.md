@@ -17,10 +17,21 @@ swapping in a library.
 - [ ] Download a KITTI odometry sequence locally and run `slam_kitti_demo` against it
 
 ## Phase 1 — VIO front-end
-- [ ] Feature detection + KLT tracking across frames
-- [ ] 5-point / PnP relative pose estimation
-- [ ] IMU preintegration between keyframes
-- [ ] Raw (unoptimized) VIO trajectory on a KITTI sequence
+- [x] Feature detection + KLT tracking across frames (`FeatureTracker`)
+- [x] Stereo triangulation + PnP relative pose estimation (`stereo_geometry`) —
+      used stereo (not monocular 5-point) so the recovered trajectory has
+      real metric scale, no separate scale-recovery step needed
+- [x] IMU preintegration between keyframes (`ImuPreintegrator`), algorithm
+      implemented and unit-tested; **not yet wired to real KITTI IMU data**
+      (see note below) or fused into the pose — that's Phase 3
+- [x] Raw (unoptimized) VIO trajectory on a KITTI sequence (`slam_vio_demo`)
+
+**Known gap:** the KITTI *odometry* benchmark download (images + Velodyne +
+ground-truth poses) does not include IMU. Real synchronized IMU comes from
+the KITTI *raw* dataset's `oxts/` folder, mapped to odometry sequences via
+the devkit's `train_mapping.txt`. Wiring that up is a data-loading task, not
+an algorithm gap — `ImuPreintegrator` itself is complete and tested against
+synthetic measurements. Revisit before Phase 3 needs real IMU-visual fusion.
 
 ## Phase 2 — LiDAR front-end
 - [ ] Point-cloud downsampling / ground filtering

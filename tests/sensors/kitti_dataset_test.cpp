@@ -45,6 +45,12 @@ class KittiSequenceReaderTest : public ::testing::Test {
     for (int i = 0; i < 3; ++i) {
       poses << "1 0 0 " << i << " 0 1 0 0 0 0 1 0\n";
     }
+
+    std::ofstream calib(sequence_dir_ / "calib.txt");
+    calib << "P0: 700 0 300 0 0 700 200 0 0 0 1 0\n";
+    calib << "P1: 700 0 300 -350 0 700 200 0 0 0 1 0\n";
+    calib << "P2: 700 0 300 0 0 700 200 0 0 0 1 0\n";
+    calib << "P3: 700 0 300 -350 0 700 200 0 0 0 1 0\n";
   }
 
   void TearDown() override { fs::remove_all(sequence_dir_); }
@@ -79,6 +85,16 @@ TEST_F(KittiSequenceReaderTest, ReadsGroundTruthPoses) {
   ASSERT_TRUE(reader.HasGroundTruth());
   const Eigen::Isometry3d pose = reader.GroundTruthPoseAt(2);
   EXPECT_DOUBLE_EQ(pose.translation().x(), 2.0);
+}
+
+TEST_F(KittiSequenceReaderTest, LoadsCalibration) {
+  KittiSequenceReader reader(sequence_dir_);
+  const StereoCalibration calib = reader.LoadCalibration();
+  EXPECT_DOUBLE_EQ(calib.left.fx, 700.0);
+  EXPECT_DOUBLE_EQ(calib.left.fy, 700.0);
+  EXPECT_DOUBLE_EQ(calib.left.cx, 300.0);
+  EXPECT_DOUBLE_EQ(calib.left.cy, 200.0);
+  EXPECT_DOUBLE_EQ(calib.baseline_m, 0.5);
 }
 
 TEST_F(KittiSequenceReaderTest, ThrowsOnMissingDirectory) {

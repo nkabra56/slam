@@ -60,6 +60,55 @@ std::vector<Eigen::Isometry3d> ReadGroundTruthPoses(const std::filesystem::path&
   return poses;
 }
 
+StereoCalibration ReadCalibration(const std::filesystem::path& path) {
+  std::ifstream file(path);
+  if (!file.is_open()) {
+    throw std::runtime_error("KittiSequenceReader: could not open calib.txt at " + path.string());
+  }
+
+  std::optional<Eigen::Matrix<double, 3, 4>> p0;
+  std::optional<Eigen::Matrix<double, 3, 4>> p1;
+
+  std::string line;
+  while (std::getline(file, line)) {
+    std::istringstream iss(line);
+    std::string label;
+    iss >> label;
+    if (label != "P0:" && label != "P1:") {
+      continue;
+    }
+
+    Eigen::Matrix<double, 3, 4> p;
+    for (int row = 0; row < 3; ++row) {
+      for (int col = 0; col < 4; ++col) {
+        iss >> p(row, col);
+      }
+    }
+    if (!iss) {
+      throw std::runtime_error("KittiSequenceReader: malformed calibration line in " +
+                                path.string());
+    }
+
+    if (label == "P0:") {
+      p0 = p;
+    } else {
+      p1 = p;
+    }
+  }
+
+  if (!p0.has_value() || !p1.has_value()) {
+    throw std::runtime_error("KittiSequenceReader: calib.txt missing P0/P1 in " + path.string());
+  }
+
+  StereoCalibration calibration;
+  calibration.left.fx = (*p0)(0, 0);
+  calibration.left.fy = (*p0)(1, 1);
+  calibration.left.cx = (*p0)(0, 2);
+  calibration.left.cy = (*p0)(1, 2);
+  calibration.baseline_m = -(*p1)(0, 3) / (*p1)(0, 0);
+  return calibration;
+}
+
 }  // namespace
 
 KittiSequenceReader::KittiSequenceReader(const std::filesystem::path& sequence_dir,
@@ -131,6 +180,10 @@ Eigen::Isometry3d KittiSequenceReader::GroundTruthPoseAt(std::size_t index) cons
     throw std::runtime_error("KittiSequenceReader: sequence has no ground-truth poses loaded");
   }
   return ground_truth_poses_.at(index);
+}
+
+StereoCalibration KittiSequenceReader::LoadCalibration() const {
+  return ReadCalibration(sequence_dir_ / "calib.txt");
 }
 
 }  // namespace slam::sensors

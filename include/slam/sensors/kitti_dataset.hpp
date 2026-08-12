@@ -31,6 +31,10 @@ class KittiSequenceReader {
   bool HasGroundTruth() const;
   Eigen::Isometry3d GroundTruthPoseAt(std::size_t index) const;
 
+  // Reads calib.txt (P0/P1 projection matrices) for the left/right
+  // grayscale pair used by LoadImage(index, 0)/LoadImage(index, 1).
+  StereoCalibration LoadCalibration() const;
+
  private:
   std::filesystem::path sequence_dir_;
   std::vector<TimestampSec> timestamps_;

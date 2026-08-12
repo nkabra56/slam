@@ -1,5 +1,8 @@
 add_library(slam_core
   sensors/kitti_dataset.cpp
+  frontend_vio/feature_tracker.cpp
+  frontend_vio/imu_preintegrator.cpp
+  frontend_vio/stereo_geometry.cpp
   frontend_vio/vio_frontend.cpp
   frontend_lidar/lidar_frontend.cpp
   backend/optimizer.cpp

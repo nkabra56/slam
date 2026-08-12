@@ -32,4 +32,22 @@ struct LidarScan {
   std::vector<LidarPoint> points;
 };
 
+struct StereoFrame {
+  TimestampSec timestamp{};
+  cv::Mat left;
+  cv::Mat right;
+};
+
+struct CameraIntrinsics {
+  double fx{1.0};
+  double fy{1.0};
+  double cx{0.0};
+  double cy{0.0};
+};
+
+struct StereoCalibration {
+  CameraIntrinsics left;
+  double baseline_m{};  // left-to-right camera baseline, meters
+};
+
 }  // namespace slam

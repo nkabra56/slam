@@ -65,15 +65,23 @@ ctest --test-dir build
 
 Run the KITTI smoke test against a downloaded sequence:
 
-```powershell
-.\build\apps\slam_kitti_demo.exe data\sequences\00 data\poses\00.txt
+```bash
+./build/apps/slam_kitti_demo data/sequences/00 data/poses/00.txt
+```
+
+Run the Phase 1 stereo-VIO frontend and print its raw trajectory:
+
+```bash
+./build/apps/slam_vio_demo data/sequences/00 data/poses/00.txt
 ```
 
 ## Status
 
-Phase 0 (scaffolding) is complete: repo/build setup, CI, core data types, and
-a KITTI sequence reader with unit tests. See [ROADMAP.md](ROADMAP.md) for
-what's next.
+Phase 0 and Phase 1 are complete: build/CI setup, core data types, a KITTI
+sequence reader (images/LiDAR/calibration/ground truth), and a stereo
+visual-inertial frontend (KLT feature tracking, stereo triangulation, PnP
+relative pose, IMU preintegration) producing a raw chained trajectory. See
+[ROADMAP.md](ROADMAP.md) for the known IMU-data-wiring gap and what's next.
 
 ## License
 

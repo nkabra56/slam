@@ -1,0 +1,15 @@
+{
+  "name": "slam",
+  "version": "0.1.0",
+  "dependencies": [
+    "eigen3",
+    "sophus",
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": ["core", "imgproc", "imgcodecs"]
+    },
+    "gtest",
+    "pybind11"
+  ]
+}

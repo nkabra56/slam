@@ -38,3 +38,41 @@ if(SLAM_BUILD_PYTHON_BINDINGS)
   find_package(pybind11 CONFIG REQUIRED)
   add_subdirectory(bindings)
 endif()
+
+# --- Install / export: lets external CMake projects (e.g. ros2_ws/'s
+# ament_cmake overlay, PHASE6_PLAN.md section 3.6) consume slam_core via a
+# plain `find_package(slam CONFIG REQUIRED)`, without slam_core itself
+# knowing anything about ROS2. Useful independent of ROS2 too -- anyone
+# linking this library from another CMake project needs it.
+include(GNUInstallDirs)
+
+install(TARGETS slam_core
+  EXPORT slamTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT slamTargets
+  FILE slamTargets.cmake
+  NAMESPACE slam::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/slam
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/slamConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/slamConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/slam
+)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/slamConfigVersion.cmake
+  VERSION 0.1.0
+  COMPATIBILITY SameMajorVersion
+)
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/slamConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/slamConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/slam
+)

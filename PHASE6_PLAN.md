@@ -633,22 +633,43 @@ to prioritize," not a hard dependency chain:
 
 ## 6. Definition of done
 
-**6A.1 (Full IMU factor)**: `ImuFactor` computes bias-corrected
-preintegration + (numeric, per the recommendation) Jacobians; unit tests
-verify bias-correction against direct re-integration; residual is zero for
-noise-free synthetic data satisfying the IMU kinematics exactly.
+**6A.1 (Full IMU factor) — done at the component level.**
+`backend::ImuPreintegration` computes bias-corrected preintegration
+(re-integration via `BiasCorrected()`, not an analytic Jacobian, per the
+recommendation above); `ComputeImuFactorResidual` is zero for noise-free
+synthetic data satisfying the IMU kinematics exactly
+(`imu_factor_test.cpp`); `NavStateGraph` (the 15-DOF solver) converges a
+wrong initial guess to the IMU-consistent state given only an IMU edge,
+and a high-weight pose edge measurably dominates a low-weight IMU edge
+between the same two nodes (`nav_state_graph_test.cpp`). **Not yet done:**
+wiring any of this into `SlidingWindowOptimizer` or a demo app — the
+existing pipeline still runs its original loosely-coupled fusion. That's
+the natural next increment.
 
-**6A.2 (Initialization)**: `VioInitializer` recovers known synthetic
-gravity/velocity/gyro-bias to tight tolerance; documented as *not*
-recovering scale (already known from metric VIO/LiDAR).
+**6A.2 (Initialization) — done at the component level.**
+`backend::InitializeVio` recovers known synthetic gravity/velocity/
+gyro-bias to tight tolerance (`vio_initializer_test.cpp`); documented as
+*not* recovering scale (already known from metric VIO/LiDAR). Not yet
+wired to run automatically before `NavStateGraph` comes online in a real
+pipeline (there's no code yet that decides *when* initialization should
+run against real frontend output).
 
 **6A.3/6A.4**: not planned; revisit only with a specific motivating reason.
 
-**Part B**: `slam_node` builds against an installed `slam_core` via
-`ament_cmake`; message adapter unit tests pass; a real rosbag or live
-sensor run produces a visually-correct (forward-moving, right-side-up)
-trajectory in `rviz2`; `README.md` gets a "Running on ROS2" section
-alongside the existing KITTI-demo instructions.
+**Part B — written, not yet built or run.** `ros2_ws/src/slam_ros2/`
+exists: message adapters + unit tests (`message_adapters.hpp/.cpp`,
+`test_message_adapters.cpp`), `SlamNode` (buffered callbacks + dedicated
+processing thread, per §3.4), launch file, params, and the root
+`CMakeLists.txt` install/export section §3.6 needs. `README.md` has a
+"Running on ROS2" section. **Not done, and not skippable:** an actual
+`colcon build` against a real ROS2 install, and a real rosbag/live run
+confirming a visually-correct (forward-moving, right-side-up) trajectory
+in `rviz2`. Message field names and the exact `rclcpp`/`message_filters`/
+`tf2_ros`/`cv_bridge` API shapes used here were written from documented
+API knowledge with no way to check them against a real install — treat
+`slam_node.cpp` specifically as unverified until that build happens, more
+so than any other file in this project. See ROADMAP.md's Phase 6 section
+for the full caveat.
 
 ---
 

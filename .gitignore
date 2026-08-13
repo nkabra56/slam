@@ -25,3 +25,8 @@ __pycache__/
 # Datasets (large; download locally per README.md)
 data/*
 !data/.gitkeep
+
+# ROS2 colcon workspace artifacts (ros2_ws/src/ is the only part tracked)
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/

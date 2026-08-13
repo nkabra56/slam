@@ -13,6 +13,10 @@ add_executable(slam_tests
   backend/pose_graph_test.cpp
   backend/loop_closure_test.cpp
   backend/optimizer_test.cpp
+  backend/nav_state_test.cpp
+  backend/imu_factor_test.cpp
+  backend/nav_state_graph_test.cpp
+  backend/vio_initializer_test.cpp
   mapping/point_cloud_map_test.cpp
   mapping/map_test.cpp
   eval/trajectory_metrics_test.cpp

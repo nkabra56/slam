@@ -10,6 +10,16 @@ or Ceres fallback. If it's numerically unstable, the fix is better math
 (correct Jacobians, robust kernels, damping/trust-region tuning), not
 swapping in a library.
 
+**On "never build-verified":** every phase below was written without a
+compiler in the loop, and that phrase repeats throughout this document as
+an honest caveat, not a rhetorical one. The `Dockerfile` at the repo root
+(`docker build --target runtime .`) is meant to finally close that gap —
+it builds `slam_core` via vcpkg and runs the full test suite as part of
+the image build, so a successful `docker build` is real verification. It
+hasn't been run here either (no Docker install in this environment), so
+until someone runs it, "unverified" still applies to everything, Docker
+tooling included — see the Dockerfile's own header comment.
+
 ## Phase 0 — Scaffolding
 - [x] Repo structure, CMake + vcpkg manifest, CI (GitHub Actions, Linux + Windows)
 - [x] `slam::common` data types (`ImageFrame`, `ImuMeasurement`, `LidarScan`)
@@ -165,5 +175,66 @@ attempted here.
       to populate it once you've run it.
 
 ## Phase 6 — Stretch: fusion + ROS2
-- [ ] Tightly-coupled LiDAR-VIO fusion in the backend
-- [ ] Wrap `slam::sensors` as ROS2 nodes for live/bag playback instead of the KITTI reader
+
+Full design in [PHASE6_PLAN.md](PHASE6_PLAN.md) — read it before extending
+this phase; the summary below tracks status against that plan's sub-phases,
+it doesn't replace it.
+
+- [x] **6A.1 — Full IMU factor.** `backend::NavState` (15-DOF: pose +
+      velocity + gyro/accel bias), `backend::ImuPreintegration`
+      (bias-aware preintegration; bias-estimate changes are handled by
+      re-integrating the raw buffer via `BiasCorrected()`, not an analytic
+      bias-Jacobian — see the class doc comment and PHASE6_PLAN.md §2.3
+      for why), and `ComputeImuFactorResidual` (the 9-dim motion + 6-dim
+      bias-random-walk residual). Unit-tested against hand-derived
+      closed-form synthetic motion.
+- [x] **6A.1 (solver) — `NavStateGraph`.** A separate 15-DOF Gauss-Newton
+      solver (deliberately not unified with `PoseGraph` — PHASE6_PLAN.md
+      §2.7) that fuses `NavPoseEdge` (VIO/LiDAR-style relative-pose
+      constraints, placed on the pose sub-block) and `NavImuEdge` (the
+      IMU factor above). `HighWeightPoseEdgeDominatesOverImuEdge` is the
+      "does fusion actually change the outcome" test, same spirit as
+      Phase 3's loop-closure test.
+- [x] **6A.2 — Initialization.** `backend::InitializeVio`: gyro bias via a
+      small numeric Gauss-Newton, then gravity + per-keyframe velocity via
+      one linear least-squares solve — no scale unknown to solve for,
+      unlike monocular VIO initialization, since this project's odometry
+      is already metric. Recovers known synthetic gravity/velocity/bias to
+      tight tolerance.
+- [ ] **Not yet done: wiring into the actual pipeline.** `NavStateGraph`/
+      `InitializeVio` exist and are tested as standalone components, but
+      nothing in `SlidingWindowOptimizer` or the demo apps uses them yet —
+      the existing pipeline still runs its original loosely-coupled
+      fusion (`PoseGraph` + the rotation-only IMU edge from the Phase 1/3
+      IMU-gap closure). Wiring a demo app to actually run tightly-coupled
+      fusion end to end is the natural next increment, not yet started.
+- [ ] 6A.3 — Tightly-coupled visual factors (not planned; see
+      PHASE6_PLAN.md §2.5 for why this is recommended against)
+- [ ] 6A.4 — Tightly-coupled LiDAR factors (not planned; see §2.6)
+- [x] **Part B — ROS2 wrapping**, in `ros2_ws/src/slam_ros2/`: message
+      adapters (`message_adapters.hpp/.cpp`) converting ROS2 messages
+      to/from `slam_core`'s structs, including the optical→REP-103
+      frame-convention fix (PHASE6_PLAN.md §3.5); `SlamNode` wrapping
+      VIO/LiDAR/backend/mapping as a live node (buffered callbacks +
+      dedicated processing thread, per §3.4); `slam_core` now has a real
+      `install()`/CMake-package export so `slam_ros2` can `find_package`
+      it without `slam_core` knowing ROS2 exists (§3.6).
+
+  **Read before trusting this one.** Every other line of code in this
+  project — including 6A's IMU math above — could be reasoned through and
+  cross-checked by hand: residual formulas verified against their own
+  zero conditions, Jacobians checked by re-deriving twice, a rotation
+  matrix checked against its own defining property. ROS2's message field
+  names and the exact API shapes of `rclcpp`/`message_filters`/`tf2_ros`/
+  `cv_bridge` are not something derivable that way — they're either right
+  or wrong by convention, and this was written from documented API
+  knowledge with no way to check it against a real ROS2 install. Two
+  tiers of confidence within Part B itself:
+  - `message_adapters.*` — pure functions, unit-tested with hand-built
+    messages (`test_message_adapters.cpp`), including a real correctness
+    check of the frame-conversion matrix against its own defining
+    property. Comparable confidence to the rest of this project.
+  - `slam_node.*` — combines multiple ROS2 library surfaces into a
+    running node. A genuine, complete attempt at PHASE6_PLAN.md §3.4's
+    design, not a stub — but the least-verified file in this repository.
+    Build and run it against a real ROS2 install before trusting it.

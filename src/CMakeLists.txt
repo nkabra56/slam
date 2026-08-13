@@ -14,6 +14,10 @@ add_library(slam_core
   backend/pose_graph.cpp
   backend/loop_closure.cpp
   backend/optimizer.cpp
+  backend/nav_state.cpp
+  backend/imu_factor.cpp
+  backend/nav_state_graph.cpp
+  backend/vio_initializer.cpp
   mapping/point_cloud_map.cpp
   mapping/map.cpp
   eval/trajectory_metrics.cpp

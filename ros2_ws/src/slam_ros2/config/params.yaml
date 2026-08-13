@@ -1,0 +1,7 @@
+slam_node:
+  ros__parameters:
+    map_frame_id: "map"
+    base_frame_id: "base_link"
+    # How close (seconds) a buffered LiDAR scan's timestamp must be to a
+    # stereo frame's to be paired with it -- see SlamNode::TakeNearestLidarScan.
+    lidar_time_tolerance_s: 0.05

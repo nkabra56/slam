@@ -7,7 +7,7 @@
     {
       "name": "opencv4",
       "default-features": false,
-      "features": ["core", "imgproc", "imgcodecs", "video", "calib3d"]
+      "features": ["calib3d", "png"]
     },
     "gtest",
     "pybind11"

@@ -41,20 +41,25 @@ ScanFeatures ExtractFeatures(const LidarScan& scan, const FeatureExtractionParam
     });
 
     std::vector<double> curvature(static_cast<std::size_t>(n), -1.0);
-    for (int i = w; i < n - w; ++i) {
+    for (int i = 0; i < n; ++i) {
       Eigen::Vector3d sum = Eigen::Vector3d::Zero();
       for (int j = -w; j <= w; ++j) {
         if (j == 0) continue;
-        sum += ring[static_cast<std::size_t>(i)] - ring[static_cast<std::size_t>(i + j)];
+        // The ring is a closed 360-degree loop, not a line -- wrap the
+        // neighbor index so points near the sort seam (wherever atan2's
+        // -pi/+pi discontinuity happens to fall for this particular ring)
+        // get a real curvature value like every other point, instead of
+        // being silently stuck at the sentinel and never selectable.
+        const int neighbor = ((i + j) % n + n) % n;
+        sum += ring[static_cast<std::size_t>(i)] - ring[static_cast<std::size_t>(neighbor)];
       }
       const double range = ring[static_cast<std::size_t>(i)].norm();
       curvature[static_cast<std::size_t>(i)] = range > 1e-6 ? sum.norm() / (2 * w * range) : 0.0;
     }
 
-    const int interior = n - 2 * w;
     for (int region = 0; region < params.num_subregions; ++region) {
-      const int region_start = w + interior * region / params.num_subregions;
-      const int region_end = w + interior * (region + 1) / params.num_subregions;
+      const int region_start = n * region / params.num_subregions;
+      const int region_end = n * (region + 1) / params.num_subregions;
       if (region_start >= region_end) continue;
 
       std::vector<int> indices;

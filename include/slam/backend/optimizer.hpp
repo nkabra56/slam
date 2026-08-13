@@ -48,7 +48,8 @@ class SlidingWindowOptimizer {
     LoopClosureParams loop_closure;
   };
 
-  explicit SlidingWindowOptimizer(Params params = {});
+  SlidingWindowOptimizer() : SlidingWindowOptimizer(Params{}) {}
+  explicit SlidingWindowOptimizer(Params params);
 
   // Adds a new keyframe. `vio_edge`/`lidar_edge` are relative-pose
   // estimates from the previous keyframe (either may have `valid == false`

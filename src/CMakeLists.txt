@@ -34,6 +34,4 @@ target_link_libraries(slam_core PUBLIC
   ${OpenCV_LIBS}
 )
 
-target_include_directories(slam_core PUBLIC ${OpenCV_INCLUDE_DIRS})
-
 target_compile_features(slam_core PUBLIC cxx_std_17)

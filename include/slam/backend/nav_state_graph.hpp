@@ -71,7 +71,8 @@ class NavStateGraph {
   void SetGravity(const Eigen::Vector3d& gravity) { gravity_ = gravity; }
   const Eigen::Vector3d& Gravity() const { return gravity_; }
 
-  int Solve(const SolveParams& params = {});
+  int Solve() { return Solve(SolveParams{}); }
+  int Solve(const SolveParams& params);
 
  private:
   using ResidualFn = std::function<Eigen::VectorXd(const NavState&, const NavState&)>;

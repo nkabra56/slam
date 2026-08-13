@@ -62,7 +62,8 @@ class PoseGraph {
   std::size_t NumNodes() const;
 
   // Returns the number of iterations run.
-  int Solve(const SolveParams& params = {});
+  int Solve() { return Solve(SolveParams{}); }
+  int Solve(const SolveParams& params);
 
  private:
   std::vector<Sophus::SE3d> poses_;

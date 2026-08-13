@@ -26,7 +26,8 @@ class Map {
     double lidar_voxel_size_m = 0.5;
   };
 
-  explicit Map(Params params = {});
+  Map() : Map(Params{}) {}
+  explicit Map(Params params);
 
   // Both must already be in world-frame coordinates -- callers transform
   // by the relevant keyframe's optimized pose (see slam_mapping_demo)

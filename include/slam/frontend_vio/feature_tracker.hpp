@@ -28,7 +28,8 @@ class FeatureTracker {
     int min_tracks = 150;
   };
 
-  explicit FeatureTracker(Params params = {});
+  FeatureTracker() : FeatureTracker(Params{}) {}
+  explicit FeatureTracker(Params params);
 
   // Tracks existing features into `image` and tops up with fresh corners
   // when the live count falls below Params::min_tracks. Returns the live

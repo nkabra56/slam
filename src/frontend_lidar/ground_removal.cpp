@@ -4,6 +4,8 @@
 #include <cmath>
 #include <random>
 
+#include <Eigen/Geometry>
+
 namespace slam::frontend_lidar {
 
 namespace {

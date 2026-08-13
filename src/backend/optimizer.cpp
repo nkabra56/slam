@@ -36,10 +36,15 @@ NodeId SlidingWindowOptimizer::AddKeyframe(
   if (new_id > 0) {
     const NodeId prev_id = new_id - 1;
     if (vio_edge.valid) {
+      // vio_edge.relative_pose follows the same "T_new = T_prev *
+      // relative_pose" forward-chaining convention as the seed formula
+      // below (and as ImuPreintegrationResult::delta_rotation above), not
+      // PoseGraphEdge's own measurement = T_to^-1 * T_from convention --
+      // so it needs the same inversion the IMU edge already applies.
       PoseGraphEdge edge;
       edge.from = prev_id;
       edge.to = new_id;
-      edge.measurement = vio_edge.relative_pose;
+      edge.measurement = vio_edge.relative_pose.inverse();
       edge.information = WeightedInformation(params_.vio_weight, vio_edge.num_matches);
       graph_.AddEdge(edge);
     }
@@ -47,7 +52,7 @@ NodeId SlidingWindowOptimizer::AddKeyframe(
       PoseGraphEdge edge;
       edge.from = prev_id;
       edge.to = new_id;
-      edge.measurement = lidar_edge.relative_pose;
+      edge.measurement = lidar_edge.relative_pose.inverse();
       edge.information = WeightedInformation(params_.lidar_weight, lidar_edge.num_matches);
       graph_.AddEdge(edge);
     }

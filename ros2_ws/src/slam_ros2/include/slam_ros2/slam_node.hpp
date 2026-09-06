@@ -21,7 +21,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
-#include "slam/backend/optimizer.hpp"
+#include "slam/backend/tightly_coupled_optimizer.hpp"
 #include "slam/frontend_lidar/lidar_frontend.hpp"
 #include "slam/frontend_vio/vio_frontend.hpp"
 #include "slam/mapping/map.hpp"
@@ -29,13 +29,17 @@
 namespace slam_ros2 {
 
 // Wraps the VIO/LiDAR/backend/mapping pipeline (slam_core) as a ROS2 node
-// -- the live/bag-playback counterpart to the KITTI demo apps.
-// Subscription callbacks only buffer messages; a dedicated processing
-// thread does the actual SLAM work, so a slow frame never silently starves
-// the executor. See PHASE6_PLAN.md section 3.4 for the reasoning behind
-// that split, and section 3.5 for the coordinate-frame conversion this
-// node publishes through (message_adapters.hpp's ToOdometryMsg/
-// ToPointCloud2).
+// -- the live/bag-playback counterpart to the KITTI demo apps. Backed by
+// TightlyCoupledOptimizer (Phase 6A, tightly_coupled_optimizer.hpp) rather
+// than the loosely-coupled SlidingWindowOptimizer, so /odometry carries a
+// real fused velocity once IMU-based initialization succeeds (see
+// TightlyCoupledOptimizer::IsInitialized) instead of always publishing
+// zero. Subscription callbacks only buffer messages; a dedicated
+// processing thread does the actual SLAM work, so a slow frame never
+// silently starves the executor. See PHASE6_PLAN.md section 3.4 for the
+// reasoning behind that split, and section 3.5 for the coordinate-frame
+// conversion this node publishes through (message_adapters.hpp's
+// ToOdometryMsg/ToPointCloud2).
 //
 // Read this before trusting it: this file has never been built against a
 // real ROS2 install, and unlike slam_core's math (which could be
@@ -95,7 +99,7 @@ class SlamNode : public rclcpp::Node {
   // --- SLAM pipeline state -- only ever touched from processing_thread_ ---
   std::optional<slam::frontend_vio::VioFrontend> vio_;
   slam::frontend_lidar::LidarFrontend lidar_;
-  slam::backend::SlidingWindowOptimizer optimizer_;
+  slam::backend::TightlyCoupledOptimizer optimizer_;
   slam::mapping::Map map_;
   nav_msgs::msg::Path path_;
 

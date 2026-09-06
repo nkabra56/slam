@@ -144,6 +144,17 @@ real IMU rotation fusion — see "IMU" above:
 ./build/apps/slam_backend_demo data/sequences/00 data/poses/00.txt [data/raw]
 ```
 
+Run the Phase 6A tightly-coupled fusion demo -- a real bias/gravity-aware
+15-DOF IMU factor (`TightlyCoupledOptimizer`, see PHASE6_PLAN.md section 2)
+instead of `slam_backend_demo`'s rotation-only IMU regularizer. Requires a
+raw KITTI dataset root (there's nothing for this class to do without real
+IMU data); prints per-frame position *and* fused velocity, and reports when
+IMU-based initialization succeeds:
+
+```bash
+./build/apps/slam_tightly_coupled_demo data/sequences/00 data/raw [data/poses/00.txt]
+```
+
 Build the final map (VIO landmarks + LiDAR features, using the
 loop-closure-corrected global poses) and export it to PLY, viewable in
 MeshLab/CloudCompare/Blender:
@@ -172,10 +183,14 @@ each: ATE RMSE (Sturm et al.'s standard rigid-alignment metric) and the
 *official* KITTI odometry protocol's average translation error (%) and
 rotation error (deg/100m) over 100-800m ground-truth path segments —
 deliberately the same protocol papers report, not a simplified stand-in,
-so the numbers are actually comparable to published results:
+so the numbers are actually comparable to published results. Pass a raw
+KITTI dataset root as a third argument to add two more rows — the
+Phase 6A tightly-coupled trajectory (incremental and globally
+re-optimized), the same "does fusion help" comparison extended to the new
+backend:
 
 ```bash
-./build/apps/slam_eval_demo data/sequences/00 data/poses/00.txt
+./build/apps/slam_eval_demo data/sequences/00 data/poses/00.txt [data/raw]
 ```
 
 **This table is a template, not a result** — this project has never been
@@ -187,21 +202,27 @@ whatever published numbers you look up for that same sequence from the
 or the LOAM/ORB-SLAM3 papers directly — don't trust a pasted-in number here
 that wasn't actually measured.
 
-| Method                     | ATE (m) | Trans. error (%) | Rot. error (deg/100m) |
-|----------------------------|---------|-------------------|------------------------|
-| VIO-only                   | —       | —                 | —                      |
-| LiDAR-only                 | —       | —                 | —                      |
-| Fused (incremental)        | —       | —                 | —                      |
-| Fused (global opt.)        | —       | —                 | —                      |
-| LOAM (published)           | —       | —                 | —                      |
-| ORB-SLAM3 (published)      | —       | —                 | —                      |
+| Method                      | ATE (m) | Trans. error (%) | Rot. error (deg/100m) |
+|-----------------------------|---------|-------------------|------------------------|
+| VIO-only                    | —       | —                 | —                      |
+| LiDAR-only                  | —       | —                 | —                      |
+| Fused (incremental)         | —       | —                 | —                      |
+| Fused (global opt.)         | —       | —                 | —                      |
+| Tightly-coupled (inc.)      | —       | —                 | —                      |
+| Tightly-coupled (global)    | —       | —                 | —                      |
+| LOAM (published)            | —       | —                 | —                      |
+| ORB-SLAM3 (published)       | —       | —                 | —                      |
 
 ## Running on ROS2 (Phase 6, Part B — experimental)
 
 `ros2_ws/src/slam_ros2/` wraps the VIO/LiDAR/backend/mapping pipeline as a
 live ROS2 node, subscribing to stereo images + IMU + a LiDAR point cloud
 and publishing odometry, a path, and a map point cloud. Full design in
-[PHASE6_PLAN.md](PHASE6_PLAN.md) section 3.
+[PHASE6_PLAN.md](PHASE6_PLAN.md) section 3. `SlamNode` runs the Phase 6A
+`TightlyCoupledOptimizer` backend (not the loosely-coupled
+`SlidingWindowOptimizer`), so `/odometry`'s twist carries a real fused
+velocity once IMU-based initialization succeeds partway through a run
+(zero before that, the same as it would be without an IMU at all).
 
 **Read this before running it**: unlike the rest of this project, `slam_node.cpp`
 combines several ROS2 library APIs (`rclcpp`, `message_filters`, `tf2_ros`,
@@ -277,12 +298,14 @@ protocol) — though its comparison table is still an empty template, since
 filling it in honestly requires a real build.
 
 Phase 6 (stretch) is in progress: Part A's full IMU factor and
-initialization exist as tested standalone components
-(`backend::NavStateGraph`, `backend::InitializeVio`) but aren't wired into
-the running pipeline yet; Part B's ROS2 wrapping is written but, per the
-section above, is this project's least-verified code. See
-[ROADMAP.md](ROADMAP.md) and [PHASE6_PLAN.md](PHASE6_PLAN.md) for the full
-detail behind both.
+initialization (`backend::NavStateGraph`, `backend::InitializeVio`) are now
+wired into a running pipeline via `backend::TightlyCoupledOptimizer`
+(`slam_tightly_coupled_demo`, and the extra rows `slam_eval_demo` reports
+when given a raw KITTI root) as well as into the ROS2 node; Part B's ROS2
+wrapping is written but, per the section above, is this project's
+least-verified code. Both remain unbuilt/unrun in the environment this was
+written in — see [ROADMAP.md](ROADMAP.md) and
+[PHASE6_PLAN.md](PHASE6_PLAN.md) for the full detail behind both.
 
 ## License
 

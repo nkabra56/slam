@@ -18,6 +18,7 @@ add_library(slam_core
   backend/imu_factor.cpp
   backend/nav_state_graph.cpp
   backend/vio_initializer.cpp
+  backend/tightly_coupled_optimizer.cpp
   mapping/point_cloud_map.cpp
   mapping/map.cpp
   eval/trajectory_metrics.cpp

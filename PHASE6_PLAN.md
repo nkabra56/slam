@@ -31,6 +31,14 @@ one without the other. Part B works fine against the *current*
 loosely-coupled backend; it does not require Part A. Section 4 gives a
 recommended sequencing, but the two tracks are genuinely independent.
 
+**Update (post-implementation):** both tracks are now done in this repo,
+and a deliberate choice was made to point `SlamNode` (Part B) at the
+Part A backend (`TightlyCoupledOptimizer`) rather than leaving it on
+`SlidingWindowOptimizer` — see section 6's Part B entry. That's a
+same-repo integration choice, not a retraction of the independence claim
+above: the two tracks are still separable in general (a fork could revert
+`SlamNode` to `SlidingWindowOptimizer` without touching Part A at all).
+
 ---
 
 ## 1. Current state (recap)
@@ -633,7 +641,7 @@ to prioritize," not a hard dependency chain:
 
 ## 6. Definition of done
 
-**6A.1 (Full IMU factor) — done at the component level.**
+**6A.1 (Full IMU factor) — done, and wired into a running pipeline.**
 `backend::ImuPreintegration` computes bias-corrected preintegration
 (re-integration via `BiasCorrected()`, not an analytic Jacobian, per the
 recommendation above); `ComputeImuFactorResidual` is zero for noise-free
@@ -641,35 +649,54 @@ synthetic data satisfying the IMU kinematics exactly
 (`imu_factor_test.cpp`); `NavStateGraph` (the 15-DOF solver) converges a
 wrong initial guess to the IMU-consistent state given only an IMU edge,
 and a high-weight pose edge measurably dominates a low-weight IMU edge
-between the same two nodes (`nav_state_graph_test.cpp`). **Not yet done:**
-wiring any of this into `SlidingWindowOptimizer` or a demo app — the
-existing pipeline still runs its original loosely-coupled fusion. That's
-the natural next increment.
+between the same two nodes (`nav_state_graph_test.cpp`).
+`backend::TightlyCoupledOptimizer` (`tightly_coupled_optimizer.hpp/.cpp`)
+wires `NavStateGraph` + `InitializeVio` into an `AddKeyframe`/
+`AddImuMeasurement` API mirroring `SlidingWindowOptimizer`'s, bootstraps
+via a retried trailing-window `InitializeVio` call, and adds live
+`NavImuEdge`s once initialized (`tightly_coupled_optimizer_test.cpp`
+covers pre-init pose-only behavior, initialization recovering known
+synthetic velocity/gravity, and the IMU factor correcting a deliberately
+weak pose edge post-init). Consumed by `slam_tightly_coupled_demo`,
+`slam_eval_demo`'s optional fifth/sixth trajectory rows, and `SlamNode`
+(Part B, below) — `SlidingWindowOptimizer` is unchanged and still used
+where tight coupling isn't wanted.
 
-**6A.2 (Initialization) — done at the component level.**
+**6A.2 (Initialization) — done, and wired.**
 `backend::InitializeVio` recovers known synthetic gravity/velocity/
 gyro-bias to tight tolerance (`vio_initializer_test.cpp`); documented as
-*not* recovering scale (already known from metric VIO/LiDAR). Not yet
-wired to run automatically before `NavStateGraph` comes online in a real
-pipeline (there's no code yet that decides *when* initialization should
-run against real frontend output).
+*not* recovering scale (already known from metric VIO/LiDAR).
+`TightlyCoupledOptimizer` now decides *when* it runs against real frontend
+output: every `AddKeyframe` call while uninitialized retries it over the
+most recent `init_window_keyframes` keyframes, skipping silently on an IMU
+gap or a degenerate solve and trying again with the next keyframe.
 
 **6A.3/6A.4**: not planned; revisit only with a specific motivating reason.
 
-**Part B — written, not yet built or run.** `ros2_ws/src/slam_ros2/`
-exists: message adapters + unit tests (`message_adapters.hpp/.cpp`,
-`test_message_adapters.cpp`), `SlamNode` (buffered callbacks + dedicated
-processing thread, per §3.4), launch file, params, and the root
-`CMakeLists.txt` install/export section §3.6 needs. `README.md` has a
-"Running on ROS2" section. **Not done, and not skippable:** an actual
-`colcon build` against a real ROS2 install, and a real rosbag/live run
-confirming a visually-correct (forward-moving, right-side-up) trajectory
-in `rviz2`. Message field names and the exact `rclcpp`/`message_filters`/
-`tf2_ros`/`cv_bridge` API shapes used here were written from documented
-API knowledge with no way to check them against a real install — treat
-`slam_node.cpp` specifically as unverified until that build happens, more
-so than any other file in this project. See ROADMAP.md's Phase 6 section
-for the full caveat.
+**Part B — written, still not built or run; now depends on 6A.**
+`ros2_ws/src/slam_ros2/` exists: message adapters + unit tests
+(`message_adapters.hpp/.cpp`, `test_message_adapters.cpp`), `SlamNode`
+(buffered callbacks + dedicated processing thread, per §3.4), launch file,
+params, and the root `CMakeLists.txt` install/export section §3.6 needs.
+`README.md` has a "Running on ROS2" section. `SlamNode` was switched from
+`SlidingWindowOptimizer` to `TightlyCoupledOptimizer` (a deliberate scope
+choice beyond this document's original "Part B doesn't require Part A"
+framing in §0/§3.1 — the tracks remain independent in general, this repo's
+node specifically no longer is): buffered IMU feeds both
+`VioFrontend::ProcessImu` and `TightlyCoupledOptimizer::AddImuMeasurement`,
+and `/odometry`'s twist carries the real fused velocity once
+initialization succeeds instead of always publishing zero. **Not done, and
+not skippable:** an actual `colcon build` against a real ROS2 install, and
+a real rosbag/live run confirming a visually-correct (forward-moving,
+right-side-up) trajectory in `rviz2`, *and* confirming initialization
+actually succeeds against real sensor rates/noise (the synthetic unit
+tests only prove the component logic, not that a real IMU stream clears
+`InitializeVio`'s gravity-magnitude plausibility guard). Message field
+names and the exact `rclcpp`/`message_filters`/`tf2_ros`/`cv_bridge` API
+shapes used here were written from documented API knowledge with no way to
+check them against a real install — treat `slam_node.cpp` specifically as
+unverified until that build happens, more so than any other file in this
+project. See ROADMAP.md's Phase 6 section for the full caveat.
 
 ---
 

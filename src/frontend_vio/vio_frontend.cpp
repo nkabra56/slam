@@ -44,7 +44,11 @@ std::unordered_map<TrackId, Eigen::Vector3d> VioFrontend::TriangulateTracks(
 VioFrontend::FrameResult VioFrontend::ProcessStereoFrame(const StereoFrame& frame) {
   FrameResult result;
   result.imu_delta = imu_preintegrator_.result();
-  imu_preintegrator_.Reset();
+  // ResetKeepingSeed, not Reset -- see its doc comment: this frontend gets
+  // fed one IMU sample per frame for KITTI's raw oxts data, and a plain
+  // Reset() would discard the continuity a single-sample-per-interval
+  // preintegration needs to ever produce a nonzero delta.
+  imu_preintegrator_.ResetKeepingSeed();
 
   const auto& tracks = tracker_.Track(frame.left);
 

@@ -17,6 +17,7 @@ add_executable(slam_tests
   backend/imu_factor_test.cpp
   backend/nav_state_graph_test.cpp
   backend/vio_initializer_test.cpp
+  backend/tightly_coupled_optimizer_test.cpp
   mapping/point_cloud_map_test.cpp
   mapping/map_test.cpp
   eval/trajectory_metrics_test.cpp

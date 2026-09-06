@@ -62,5 +62,37 @@ TEST(ImuPreintegrator, ResetClearsAccumulatedState) {
   EXPECT_TRUE(result.delta_position.isZero());
 }
 
+TEST(ImuPreintegrator, ResetKeepingSeedClearsDeltaButPreservesContinuity) {
+  ImuPreintegrator preintegrator;
+
+  ImuMeasurement m1;
+  m1.timestamp = 0.0;
+  m1.linear_acceleration = Eigen::Vector3d(2.0, 0.0, 0.0);
+  preintegrator.Integrate(m1);
+  ImuMeasurement m2;
+  m2.timestamp = 1.0;
+  m2.linear_acceleration = Eigen::Vector3d(2.0, 0.0, 0.0);
+  preintegrator.Integrate(m2);
+
+  preintegrator.ResetKeepingSeed();
+  const auto& reset_result = preintegrator.result();
+  EXPECT_EQ(reset_result.delta_time, 0.0);
+  EXPECT_TRUE(reset_result.delta_velocity.isZero());
+  EXPECT_TRUE(reset_result.delta_position.isZero());
+
+  // Unlike Reset(), the next Integrate() call should immediately compute a
+  // delta from the retained seed (m2) rather than needing a second call to
+  // seed a fresh window -- the whole point of this method (see its doc
+  // comment): a caller feeding exactly one sample per interval still gets
+  // a nonzero delta.
+  ImuMeasurement m3;
+  m3.timestamp = 2.0;
+  preintegrator.Integrate(m3);
+
+  const auto& result = preintegrator.result();
+  EXPECT_NEAR(result.delta_time, 1.0, 1e-9);
+  EXPECT_NEAR(result.delta_velocity.x(), 2.0, 1e-9);
+}
+
 }  // namespace
 }  // namespace slam::frontend_vio

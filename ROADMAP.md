@@ -201,13 +201,40 @@ it doesn't replace it.
       unlike monocular VIO initialization, since this project's odometry
       is already metric. Recovers known synthetic gravity/velocity/bias to
       tight tolerance.
-- [ ] **Not yet done: wiring into the actual pipeline.** `NavStateGraph`/
-      `InitializeVio` exist and are tested as standalone components, but
-      nothing in `SlidingWindowOptimizer` or the demo apps uses them yet —
-      the existing pipeline still runs its original loosely-coupled
-      fusion (`PoseGraph` + the rotation-only IMU edge from the Phase 1/3
-      IMU-gap closure). Wiring a demo app to actually run tightly-coupled
-      fusion end to end is the natural next increment, not yet started.
+- [x] **Wired into a running pipeline.** `backend::TightlyCoupledOptimizer`
+      (`tightly_coupled_optimizer.hpp/.cpp`) is a `NavStateGraph`-based
+      sibling to `SlidingWindowOptimizer`: every keyframe gets pose edges
+      (VIO/LiDAR/loop-closure) immediately, exactly like the loosely-
+      coupled backend, while raw IMU is buffered per interval
+      (`AddImuMeasurement`) until `VioInitializer` succeeds over a
+      trailing window of keyframes — at which point gravity and that
+      window's velocity/bias are seeded, `NavImuEdge`s are added
+      retroactively for it, and every keyframe after that gets a live IMU
+      factor alongside its pose edges (`IsInitialized()` reports which
+      stage is active; if IMU data never arrives or every window is
+      degenerate, it runs pose-only forever — a safe fallback, not an
+      error). `slam_tightly_coupled_demo` runs this end to end on a real
+      KITTI sequence; `slam_eval_demo`, given a raw KITTI root, adds
+      "Tightly-coupled (inc./global)" rows to its comparison table
+      alongside the loosely-coupled ones. `SlamNode` (Part B) also runs
+      this backend now — see below. Still the original scope decision
+      from PHASE6_PLAN.md section 2.7: a separate class from
+      `PoseGraph`/`SlidingWindowOptimizer`, not a generalization of
+      either.
+
+  **Bonus fix found while wiring this in:** `ImuPreintegrator::Reset()`
+  (frontend_vio, used by `VioFrontend::ProcessStereoFrame` since Phase 1)
+  discarded its continuity seed every call. Since KITTI's raw oxts data is
+  one sample per frame, and `Integrate()`'s first call after a reset only
+  seeds `previous_` without producing a delta, this meant the existing
+  rotation-only IMU edge's `delta_time` was silently always zero —
+  `SlidingWindowOptimizer::AddKeyframe`'s `imu_edge->delta_time > 0.0`
+  guard skipped it every time, so `main_backend_demo`'s IMU rotation
+  fusion was inert in practice despite being wired up. Added
+  `ImuPreintegrator::ResetKeepingSeed()` (keeps the last sample as the
+  next interval's seed) and switched `VioFrontend` to use it instead.
+  `TightlyCoupledOptimizer::AddImuMeasurement` was written with the same
+  continuity-preserving pattern from the start, so it never had this bug.
 - [ ] 6A.3 — Tightly-coupled visual factors (not planned; see
       PHASE6_PLAN.md §2.5 for why this is recommended against)
 - [ ] 6A.4 — Tightly-coupled LiDAR factors (not planned; see §2.6)
@@ -218,7 +245,15 @@ it doesn't replace it.
       VIO/LiDAR/backend/mapping as a live node (buffered callbacks +
       dedicated processing thread, per §3.4); `slam_core` now has a real
       `install()`/CMake-package export so `slam_ros2` can `find_package`
-      it without `slam_core` knowing ROS2 exists (§3.6).
+      it without `slam_core` knowing ROS2 exists (§3.6). `SlamNode` runs
+      `TightlyCoupledOptimizer` (not `SlidingWindowOptimizer`) — buffered
+      IMU messages feed both `VioFrontend::ProcessImu` and
+      `TightlyCoupledOptimizer::AddImuMeasurement`, and `/odometry`'s
+      twist carries the real fused velocity once initialization succeeds
+      (zero before that). This was a deliberate scope choice beyond
+      PHASE6_PLAN.md §3's original "Part B doesn't require Part A"
+      framing — the two tracks remain independent in general, but this
+      repo's `SlamNode` specifically now depends on 6A.
 
   **Read before trusting this one.** Every other line of code in this
   project — including 6A's IMU math above — could be reasoned through and

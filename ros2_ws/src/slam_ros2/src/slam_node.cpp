@@ -150,11 +150,16 @@ void SlamNode::ProcessingLoop() {
     // processing the frame -- matches VioFrontend::ProcessStereoFrame's
     // calling convention (see the KITTI demo apps: ProcessImu, then
     // ProcessStereoFrame, so the returned imu_delta covers exactly the
-    // interval since the previous frame).
+    // interval since the previous frame). Also feeds the same samples into
+    // optimizer_ (TightlyCoupledOptimizer::AddImuMeasurement), matching
+    // the AddImuMeasurement-then-AddKeyframe convention the KITTI tightly-
+    // coupled demo uses.
     {
       std::lock_guard<std::mutex> lock(imu_mutex_);
       while (!pending_imu_.empty() && rclcpp::Time(pending_imu_.front()->header.stamp) <= stamp) {
-        vio_->ProcessImu(ToImuMeasurement(*pending_imu_.front()));
+        const slam::ImuMeasurement measurement = ToImuMeasurement(*pending_imu_.front());
+        vio_->ProcessImu(measurement);
+        optimizer_.AddImuMeasurement(measurement);
         pending_imu_.pop_front();
       }
     }
@@ -167,12 +172,12 @@ void SlamNode::ProcessingLoop() {
     stereo_frame.right = right_frame.image;
     const auto vio_result = vio_->ProcessStereoFrame(stereo_frame);
 
-    slam::backend::SlidingWindowOptimizer::EdgeMeasurement vio_edge;
+    slam::backend::TightlyCoupledOptimizer::EdgeMeasurement vio_edge;
     vio_edge.valid = vio_result.has_pose;
     vio_edge.relative_pose = vio_result.relative_pose;
     vio_edge.num_matches = vio_result.num_inliers;
 
-    slam::backend::SlidingWindowOptimizer::EdgeMeasurement lidar_edge;
+    slam::backend::TightlyCoupledOptimizer::EdgeMeasurement lidar_edge;
     std::optional<slam::frontend_lidar::ScanFeatures> lidar_features_for_map;
 
     if (const auto scan_msg = TakeNearestLidarScan(stamp)) {
@@ -185,9 +190,15 @@ void SlamNode::ProcessingLoop() {
       lidar_features_for_map = lidar_.LastFeatures();
     }
 
-    const auto node_id =
-        optimizer_.AddKeyframe(vio_edge, lidar_edge, std::nullopt, lidar_features_for_map);
-    const Sophus::SE3d pose = optimizer_.PoseOf(node_id);
+    const auto node_id = optimizer_.AddKeyframe(vio_edge, lidar_edge, lidar_features_for_map);
+    const auto& nav_state = optimizer_.StateOf(node_id);
+    const Sophus::SE3d pose = nav_state.pose;
+    // Real fused velocity once tightly-coupled initialization has
+    // succeeded (see TightlyCoupledOptimizer::IsInitialized); zero before
+    // that, same as SlidingWindowOptimizer's pose-only stage would give --
+    // no velocity state exists yet to publish.
+    const Eigen::Vector3d velocity = optimizer_.IsInitialized() ? nav_state.velocity
+                                                                 : Eigen::Vector3d::Zero();
 
     if (lidar_features_for_map.has_value()) {
       std::vector<Eigen::Vector3d> world_points;
@@ -202,8 +213,7 @@ void SlamNode::ProcessingLoop() {
     for (const auto& [track_id, p] : vio_->LastLandmarks()) world_landmarks.push_back(pose * p);
     map_.InsertLandmarks(world_landmarks);
 
-    const auto odometry_msg =
-        ToOdometryMsg(pose, Eigen::Vector3d::Zero(), map_frame_id_, base_frame_id_, stamp);
+    const auto odometry_msg = ToOdometryMsg(pose, velocity, map_frame_id_, base_frame_id_, stamp);
     odometry_pub_->publish(odometry_msg);
 
     geometry_msgs::msg::TransformStamped transform;

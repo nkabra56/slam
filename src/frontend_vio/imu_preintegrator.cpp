@@ -8,6 +8,8 @@ void ImuPreintegrator::Reset() {
   previous_ = ImuMeasurement{};
 }
 
+void ImuPreintegrator::ResetKeepingSeed() { result_ = ImuPreintegrationResult{}; }
+
 void ImuPreintegrator::Integrate(const ImuMeasurement& measurement) {
   if (!has_previous_) {
     previous_ = measurement;

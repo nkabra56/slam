@@ -103,12 +103,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=deps /opt/slam /opt/slam
+# slamConfig.cmake's find_dependency(Eigen3/Sophus/OpenCV) needs these
+# findable too -- they were installed by vcpkg into the deps stage, not by
+# `cmake --install` (which only exports slam_core itself). Copying vcpkg's
+# whole installed tree keeps slam_core linked against the exact same
+# OpenCV/Eigen3/Sophus build it was compiled against, rather than mixing
+# it with a different OpenCV version off apt (e.g. the one
+# ros-humble-cv-bridge pulls in below) -- see README.md's ROS2 section for
+# the residual risk this doesn't eliminate: cv_bridge itself is a prebuilt
+# binary linked against apt's OpenCV, so a cv::Mat crossing from cv_bridge
+# into slam_core still crosses an OpenCV-build boundary. Untested until a
+# real image message flows through that path.
+COPY --from=deps /workspace/vcpkg_installed/x64-linux /opt/vcpkg_installed/x64-linux
 
 WORKDIR /ros2_ws
 COPY ros2_ws/src ./src
 
 RUN . /opt/ros/humble/setup.sh \
-    && colcon build --cmake-args -DCMAKE_PREFIX_PATH=/opt/slam
+    && colcon build --cmake-args "-DCMAKE_PREFIX_PATH=/opt/slam;/opt/vcpkg_installed/x64-linux"
 
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc \
     && echo "source /ros2_ws/install/setup.bash" >> /root/.bashrc

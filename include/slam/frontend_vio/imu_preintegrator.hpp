@@ -35,6 +35,17 @@ class ImuPreintegrator {
 
   void Reset();
 
+  // Like Reset(), but keeps the most recently integrated sample as the
+  // seed for the next accumulation window instead of forgetting it. A
+  // caller that feeds exactly one IMU sample per frame before each
+  // ProcessStereoFrame call (as KITTI's raw oxts data does -- one sample
+  // per synced frame, see ROADMAP.md) needs this: Integrate()'s first call
+  // after a reset only seeds `previous_` and contributes no delta by
+  // itself (see Integrate's doc comment), so plain Reset() between every
+  // frame would make every interval's delta permanently zero. See
+  // VioFrontend::ProcessStereoFrame, the caller that uses this.
+  void ResetKeepingSeed();
+
   // Measurements must be added in increasing timestamp order. The first
   // call after construction or Reset() only seeds the starting sample and
   // contributes no delta.

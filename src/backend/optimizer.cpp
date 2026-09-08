@@ -14,13 +14,8 @@ Eigen::Matrix<double, 6, 6> SlidingWindowOptimizer::WeightedInformation(double w
 }
 
 Eigen::Matrix<double, 6, 6> SlidingWindowOptimizer::RotationOnlyInformation(double weight) const {
-  // Sophus::SE3d::Tangent order is (rho [translation-like], phi
-  // [rotation]) -- see pose_graph.hpp -- and Sophus::SE3d::log() returns
-  // phi as the clean SO3 log of the rotation part alone, independent of
-  // translation. So zeroing the first 3 rows/cols here makes this edge
-  // contribute nothing to translation regardless of what's in
-  // measurement's translation slot, which is why AddKeyframe can leave it
-  // at zero below.
+  // Tangent order is (translation, rotation); zeroing rows/cols 0-2 makes
+  // this edge ignore measurement's translation slot entirely.
   Eigen::Matrix<double, 6, 6> information = Eigen::Matrix<double, 6, 6>::Zero();
   information.block<3, 3>(3, 3) = weight * Eigen::Matrix3d::Identity();
   return information;
@@ -36,11 +31,8 @@ NodeId SlidingWindowOptimizer::AddKeyframe(
   if (new_id > 0) {
     const NodeId prev_id = new_id - 1;
     if (vio_edge.valid) {
-      // vio_edge.relative_pose follows the same "T_new = T_prev *
-      // relative_pose" forward-chaining convention as the seed formula
-      // below (and as ImuPreintegrationResult::delta_rotation above), not
-      // PoseGraphEdge's own measurement = T_to^-1 * T_from convention --
-      // so it needs the same inversion the IMU edge already applies.
+      // relative_pose is T_new = T_prev * relative_pose, not PoseGraphEdge's
+      // own T_to^-1 * T_from -- needs inverting, same as the IMU edge below.
       PoseGraphEdge edge;
       edge.from = prev_id;
       edge.to = new_id;
@@ -57,15 +49,8 @@ NodeId SlidingWindowOptimizer::AddKeyframe(
       graph_.AddEdge(edge);
     }
     if (imu_edge.has_value() && imu_edge->delta_time > 0.0) {
-      // ImuPreintegrator accumulates delta_rotation = R_prev^-1 * R_curr
-      // (see imu_preintegrator.hpp/cpp: the recursion delta_R <- delta_R *
-      // Exp(gyro*dt) starting from Identity integrates the standard
-      // right-multiplicative rotation kinematic Rdot = R*[w]_x, so
-      // delta_rotation is exactly "how much the body frame rotated,"
-      // R_prev^-1*R_curr). PoseGraphEdge's convention is
-      // measurement = T_to^-1 * T_from (see pose_graph.hpp), so with
-      // from=prev, to=curr: measurement.rotation = R_curr^-1*R_prev =
-      // (R_prev^-1*R_curr)^-1 = delta_rotation^-1.
+      // delta_rotation = R_prev^-1*R_curr; PoseGraphEdge wants
+      // T_to^-1*T_from, so this needs inverting.
       PoseGraphEdge edge;
       edge.from = prev_id;
       edge.to = new_id;
@@ -74,10 +59,7 @@ NodeId SlidingWindowOptimizer::AddKeyframe(
       graph_.AddEdge(edge);
     }
 
-    // Seed the new node's initial pose from whichever odometry source
-    // fired, preferring LiDAR (denser geometric constraint) if both are
-    // available. T_new = T_prev * relative_pose^-1 (see ROADMAP.md /
-    // frontend docs for the relative-pose convention this mirrors).
+    // Prefer LiDAR (denser constraint) over VIO for the seed pose.
     const Sophus::SE3d seed_relative =
         lidar_edge.valid ? lidar_edge.relative_pose
         : vio_edge.valid ? vio_edge.relative_pose

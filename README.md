@@ -4,7 +4,7 @@ A LiDAR + visual-inertial SLAM system built from scratch in C++, with Python
 bindings, meant as the foundation for a larger robotics project rather than a
 one-off demo. Front-ends and the backend optimizer are hand-implemented
 instead of wrapping an existing SLAM framework. See [ROADMAP.md](ROADMAP.md)
-for the phase-by-phase build plan and current status.
+for the module-by-module build plan and current status.
 
 ## Architecture
 
@@ -80,13 +80,11 @@ Pass that `raw/` root as `slam_backend_demo`'s third argument to enable it.
 docker build --target runtime -t slam:runtime .
 ```
 
-This builds `slam_core` and every app via vcpkg, **and runs the full test
-suite as part of the build** — `docker build` fails if any test fails. It
-doesn't need vcpkg, a specific compiler, or any local toolchain state; it's
-the one build path in this project's history that's actually meant to be
-run and checked, not just reasoned through. Expect the first build to take
-a while (vcpkg builds OpenCV and friends from source); later builds reuse
-Docker's layer cache and are fast unless `vcpkg.json` changed.
+Builds `slam_core` and every app via vcpkg, and runs the full test suite as
+part of the build — `docker build` fails if any test fails. No local vcpkg
+or toolchain setup required. The first build takes a while (vcpkg builds
+OpenCV and friends from source); later builds reuse Docker's layer cache and
+are fast unless `vcpkg.json` changed.
 
 Run an app against a mounted dataset (see "Dataset" below for the expected
 `data/` layout):
@@ -96,9 +94,7 @@ docker run --rm -v "$(pwd)/data:/data:ro" slam:runtime \
   slam_backend_demo /data/sequences/00 /data/poses/00.txt
 ```
 
-The Phase 6 Part B ROS2 overlay builds as a separate target — see "Running
-on ROS2" further down for why it's worth trying this one specifically once
-it builds, since it's this project's least-verified code:
+The ROS2 overlay (see "Running on ROS2" below) builds as a separate target:
 
 ```bash
 docker build --target ros2 -t slam:ros2 .
@@ -123,33 +119,32 @@ Run the KITTI smoke test against a downloaded sequence:
 ./build/apps/slam_kitti_demo data/sequences/00 data/poses/00.txt
 ```
 
-Run the Phase 1 stereo-VIO frontend and print its raw trajectory:
+Run the stereo-VIO frontend and print its raw trajectory:
 
 ```bash
 ./build/apps/slam_vio_demo data/sequences/00 data/poses/00.txt
 ```
 
-Run the Phase 2 LiDAR frontend and print its raw trajectory:
+Run the LiDAR frontend and print its raw trajectory:
 
 ```bash
 ./build/apps/slam_lidar_demo data/sequences/00 data/poses/00.txt
 ```
 
-Run both frontends fused through the Phase 3 backend (prints the
-per-frame trajectory, then a final loop-closure-corrected global pass).
-The third argument (a raw KITTI dataset root) is optional and enables
-real IMU rotation fusion — see "IMU" above:
+Run both frontends fused through the backend (prints the per-frame
+trajectory, then a final loop-closure-corrected global pass). The third
+argument (a raw KITTI dataset root) is optional and enables real IMU
+rotation fusion — see "IMU" above:
 
 ```bash
 ./build/apps/slam_backend_demo data/sequences/00 data/poses/00.txt [data/raw]
 ```
 
-Run the Phase 6A tightly-coupled fusion demo -- a real bias/gravity-aware
-15-DOF IMU factor (`TightlyCoupledOptimizer`, see PHASE6_PLAN.md section 2)
-instead of `slam_backend_demo`'s rotation-only IMU regularizer. Requires a
-raw KITTI dataset root (there's nothing for this class to do without real
-IMU data); prints per-frame position *and* fused velocity, and reports when
-IMU-based initialization succeeds:
+Run the tightly-coupled fusion demo — a bias/gravity-aware 15-DOF IMU factor
+(`TightlyCoupledOptimizer`, see PHASE6_PLAN.md section 2) instead of
+`slam_backend_demo`'s rotation-only IMU regularizer. Requires a raw KITTI
+dataset root; prints per-frame position and fused velocity, and reports
+when IMU-based initialization succeeds:
 
 ```bash
 ./build/apps/slam_tightly_coupled_demo data/sequences/00 data/raw [data/poses/00.txt]
@@ -180,27 +175,20 @@ cmake --build build
 backend-fused incrementally, backend-fused after a final global
 loop-closure-corrected optimization) over one sequence and reports, for
 each: ATE RMSE (Sturm et al.'s standard rigid-alignment metric) and the
-*official* KITTI odometry protocol's average translation error (%) and
-rotation error (deg/100m) over 100-800m ground-truth path segments —
-deliberately the same protocol papers report, not a simplified stand-in,
-so the numbers are actually comparable to published results. Pass a raw
-KITTI dataset root as a third argument to add two more rows — the
-Phase 6A tightly-coupled trajectory (incremental and globally
-re-optimized), the same "does fusion help" comparison extended to the new
-backend:
+official KITTI odometry protocol's average translation error (%) and
+rotation error (deg/100m) over 100-800m ground-truth path segments, so the
+numbers are comparable to published results. Pass a raw KITTI dataset root
+as a third argument to add two more rows — the tightly-coupled trajectory
+(incremental and globally re-optimized):
 
 ```bash
 ./build/apps/slam_eval_demo data/sequences/00 data/poses/00.txt [data/raw]
 ```
 
-**This table is a template, not a result** — this project has never been
-build-verified (no compiler in the environment it was written in), so
-there are no real numbers to publish yet. Run the command above on a
-downloaded sequence and fill in the top rows yourself; compare against
-whatever published numbers you look up for that same sequence from the
-[KITTI odometry leaderboard](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
-or the LOAM/ORB-SLAM3 papers directly — don't trust a pasted-in number here
-that wasn't actually measured.
+**This table is a template** — run the command above on a downloaded
+sequence and fill in the top rows; compare against published numbers from
+the [KITTI odometry leaderboard](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+or the LOAM/ORB-SLAM3 papers for the same sequence.
 
 | Method                      | ATE (m) | Trans. error (%) | Rot. error (deg/100m) |
 |-----------------------------|---------|-------------------|------------------------|
@@ -213,30 +201,25 @@ that wasn't actually measured.
 | LOAM (published)            | —       | —                 | —                      |
 | ORB-SLAM3 (published)       | —       | —                 | —                      |
 
-## Running on ROS2 (Phase 6, Part B — experimental)
+## Running on ROS2 (experimental)
 
 `ros2_ws/src/slam_ros2/` wraps the VIO/LiDAR/backend/mapping pipeline as a
 live ROS2 node, subscribing to stereo images + IMU + a LiDAR point cloud
 and publishing odometry, a path, and a map point cloud. Full design in
-[PHASE6_PLAN.md](PHASE6_PLAN.md) section 3. `SlamNode` runs the Phase 6A
+[PHASE6_PLAN.md](PHASE6_PLAN.md) section 3. `SlamNode` runs the
 `TightlyCoupledOptimizer` backend (not the loosely-coupled
 `SlidingWindowOptimizer`), so `/odometry`'s twist carries a real fused
 velocity once IMU-based initialization succeeds partway through a run
-(zero before that, the same as it would be without an IMU at all).
+(zero before that, the same as without an IMU at all).
 
-**Read this before running it**: unlike the rest of this project, `slam_node.cpp`
-combines several ROS2 library APIs (`rclcpp`, `message_filters`, `tf2_ros`,
-`cv_bridge`) that were written from documented API knowledge with no way to
-check them against a real ROS2 install or compiler — there simply isn't one
-in the environment this was written in. It's a genuine, complete attempt at
-the design in PHASE6_PLAN.md, not a stub, but it is the single
-least-verified file in this repository. `message_adapters.hpp/.cpp` (the
+**Before trusting this**: `slam_node.cpp` combines several ROS2 library
+APIs (`rclcpp`, `message_filters`, `tf2_ros`, `cv_bridge`) and is the
+least build-verified file in this repository — build and run it against a
+real ROS2 install before relying on it. `message_adapters.hpp/.cpp` (the
 ROS-message ↔ `slam_core`-struct conversions) are pure, unit-tested
-functions and carry meaningfully more confidence than `slam_node.cpp` does.
+functions with meaningfully more confidence than `slam_node.cpp`.
 
-**Easiest path — Docker**, no local ROS2 install needed (see "Building with
-Docker" above; this is the build that most directly tests whether
-`slam_node.cpp` actually compiles against a real ROS2):
+**Easiest path — Docker**, no local ROS2 install needed:
 
 ```bash
 docker build --target ros2 -t slam:ros2 .
@@ -246,8 +229,8 @@ colcon test --packages-select slam_ros2 && colcon test-result --verbose
 ros2 launch slam_ros2 slam.launch.py
 ```
 
-**Without Docker**, if you already have ROS2 Humble installed: build
-`slam_core` and install it somewhere ROS2 can find via CMake:
+**Without Docker**, with ROS2 Humble installed: build `slam_core` and
+install it somewhere ROS2 can find via CMake:
 
 ```bash
 cmake --preset default
@@ -263,7 +246,7 @@ colcon build --cmake-args -DCMAKE_PREFIX_PATH=/path/to/slam-install
 source install/setup.bash
 ```
 
-Run the message adapter unit tests (these don't need a running ROS graph):
+Run the message adapter unit tests (no running ROS graph needed):
 
 ```bash
 colcon test --packages-select slam_ros2
@@ -279,8 +262,8 @@ ros2 launch slam_ros2 slam.launch.py
 
 Before trusting the output, visually confirm in `rviz2` that the published
 trajectory moves in the direction the sensor actually moved (forward along
-`base_link`'s `+X`, right-side up) — see PHASE6_PLAN.md section 3.5 for why
-that specific check matters more than it might seem.
+`base_link`'s `+X`, right-side up) — see PHASE6_PLAN.md section 3.5 for the
+coordinate-frame convention behind that check.
 
 ## Status
 
@@ -294,18 +277,17 @@ pose-graph Gauss-Newton optimizer fusing VIO, LiDAR, and IMU-rotation edges
 in a sliding window, plus geometric loop closure), mapping (a
 voxel-accumulated point-cloud map exported to PLY, plus an opt-in Pangolin
 live viewer), and evaluation tooling (ATE + the official KITTI RPE
-protocol) — though its comparison table is still an empty template, since
-filling it in honestly requires a real build.
+protocol) — its comparison table is still a template pending a real run
+against downloaded data.
 
-Phase 6 (stretch) is in progress: Part A's full IMU factor and
-initialization (`backend::NavStateGraph`, `backend::InitializeVio`) are now
-wired into a running pipeline via `backend::TightlyCoupledOptimizer`
+Phase 6 (stretch) is in progress: the full IMU factor and initialization
+(`backend::NavStateGraph`, `backend::InitializeVio`) are wired into a
+running pipeline via `backend::TightlyCoupledOptimizer`
 (`slam_tightly_coupled_demo`, and the extra rows `slam_eval_demo` reports
-when given a raw KITTI root) as well as into the ROS2 node; Part B's ROS2
+when given a raw KITTI root) as well as into the ROS2 node; the ROS2
 wrapping is written but, per the section above, is this project's
-least-verified code. Both remain unbuilt/unrun in the environment this was
-written in — see [ROADMAP.md](ROADMAP.md) and
-[PHASE6_PLAN.md](PHASE6_PLAN.md) for the full detail behind both.
+least build-verified code. See [ROADMAP.md](ROADMAP.md) and
+[PHASE6_PLAN.md](PHASE6_PLAN.md) for full detail.
 
 ## License
 

@@ -13,20 +13,8 @@
 
 namespace slam::backend {
 
-// Fuses VIO and LiDAR frame-to-frame relative poses into one optimized
-// trajectory: each new keyframe adds a VIO edge and/or a LiDAR edge to a
-// shared PoseGraph (pose_graph.hpp), solved with hand-written Gauss-Newton
-// -- no GTSAM/g2o/Ceres, per ROADMAP.md's optimizer policy.
-//
-// Keyframes older than the sliding window are frozen (PoseGraph::FixNode)
-// rather than truly marginalized via a Schur complement -- a deliberate
-// Phase 3 scope decision (see ROADMAP.md), not an oversight: true
-// marginalization would fold a dropped node's constraints into a prior on
-// its neighbor, which is real added complexity beyond this phase's budget.
-// Loop closures (loop_closure.hpp) still add edges from the active window
-// back to frozen history, correcting the *current* window relative to it;
-// OptimizeGlobally() additionally unfreezes the whole trajectory for a
-// one-shot final correction, e.g. at the end of a full sequence run.
+// Fuses VIO and LiDAR relative poses into one PoseGraph. Keyframes outside
+// the window are frozen, not marginalized.
 class SlidingWindowOptimizer {
  public:
   struct EdgeMeasurement {
@@ -40,10 +28,7 @@ class SlidingWindowOptimizer {
     double vio_weight = 1.0;
     double lidar_weight = 1.0;
     double max_edge_weight = 200.0;  // caps a single edge's influence
-    // Weight on the IMU rotation-only edge (see AddKeyframe). Gyro
-    // integration over one KITTI frame interval (~0.1s) is normally quite
-    // trustworthy -- no gravity/bias-drift concerns at that timescale --
-    // so this defaults higher than the visual/LiDAR edge weights.
+    // Higher than vio/lidar_weight: gyro is trustworthy over one frame interval.
     double imu_rotation_weight = 10.0;
     LoopClosureParams loop_closure;
   };
@@ -51,19 +36,7 @@ class SlidingWindowOptimizer {
   SlidingWindowOptimizer() : SlidingWindowOptimizer(Params{}) {}
   explicit SlidingWindowOptimizer(Params params);
 
-  // Adds a new keyframe. `vio_edge`/`lidar_edge` are relative-pose
-  // estimates from the previous keyframe (either may have `valid == false`
-  // if that frontend failed to track this frame). `imu_edge`, if given, is
-  // the preintegrated IMU delta between the previous keyframe and this one
-  // (VioFrontend::FrameResult::imu_delta): only its *rotation* is used, via
-  // an edge whose information matrix has zero weight on the translation
-  // rows -- gyro integration is reliable at this timescale, but the
-  // preintegrated position isn't (it has no velocity-state or gravity
-  // compensation here; that's Phase 6 tightly-coupled fusion). See
-  // ROADMAP.md. `lidar_features`, if given, is used both to attempt
-  // closing a loop against earlier keyframes now, and for future
-  // loop-closure queries against this one. Re-solves the active window
-  // before returning.
+  // `imu_edge`, if given, contributes rotation only. Re-solves the active window.
   NodeId AddKeyframe(const EdgeMeasurement& vio_edge, const EdgeMeasurement& lidar_edge,
                       const std::optional<frontend_vio::ImuPreintegrationResult>& imu_edge = std::nullopt,
                       std::optional<frontend_lidar::ScanFeatures> lidar_features = std::nullopt);
@@ -72,8 +45,7 @@ class SlidingWindowOptimizer {
   std::size_t NumKeyframes() const;
   int NumLoopClosures() const { return num_loop_closures_; }
 
-  // Unfixes every node except the first (kept as the gauge anchor) and
-  // re-solves the full accumulated graph, including all loop closures.
+  // Unfixes every node except the first and re-solves the full graph.
   int OptimizeGlobally();
 
  private:

@@ -111,12 +111,7 @@ TEST(ToStereoCalibration, ComputesBaselineFromRightProjectionMatrix) {
   EXPECT_DOUBLE_EQ(calibration.baseline_m, 0.5);
 }
 
-// The highest-stakes formula in Part B (PHASE6_PLAN.md section 3.5): if
-// this is wrong, published trajectories/maps render sideways or
-// upside-down in rviz2. This checks it against its own defining property
-// (where do the optical frame's basis vectors land in base-frame axes) --
-// a real, hand-verifiable correctness check, though still not a
-// substitute for visually confirming a real trajectory moves forward.
+// Wrong here means trajectories/maps render sideways or upside-down in rviz2.
 TEST(OpticalToBaseRotation, MapsForwardAndUpAxesCorrectly) {
   const Eigen::Matrix3d R = OpticalToBaseRotation();
 

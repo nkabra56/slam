@@ -7,17 +7,13 @@
 
 namespace slam::frontend_lidar {
 
-// Simple static 3D k-d tree over a fixed point set, built once and queried
-// many times -- exactly the access pattern scan matching needs each
-// Gauss-Newton iteration. No PCL/nanoflann; median-split build, standard
-// branch-and-bound nearest-neighbor query.
+// Static 3D k-d tree, built once and queried many times (median-split build,
+// branch-and-bound NN query).
 class KdTree3d {
  public:
   explicit KdTree3d(std::vector<Eigen::Vector3d> points);
 
-  // Returns up to k nearest-neighbor indices into the original points
-  // vector (as passed to the constructor), sorted nearest-first. May
-  // return fewer than k if the tree has fewer points.
+  // Up to k nearest indices into the original points vector, nearest-first.
   std::vector<std::size_t> KNearest(const Eigen::Vector3d& query, int k) const;
 
   const std::vector<Eigen::Vector3d>& points() const { return points_; }

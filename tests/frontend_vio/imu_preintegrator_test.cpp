@@ -80,11 +80,8 @@ TEST(ImuPreintegrator, ResetKeepingSeedClearsDeltaButPreservesContinuity) {
   EXPECT_TRUE(reset_result.delta_velocity.isZero());
   EXPECT_TRUE(reset_result.delta_position.isZero());
 
-  // Unlike Reset(), the next Integrate() call should immediately compute a
-  // delta from the retained seed (m2) rather than needing a second call to
-  // seed a fresh window -- the whole point of this method (see its doc
-  // comment): a caller feeding exactly one sample per interval still gets
-  // a nonzero delta.
+  // Unlike Reset(), the next Integrate() call computes a delta immediately
+  // from the retained seed (m2), no second call needed.
   ImuMeasurement m3;
   m3.timestamp = 2.0;
   preintegrator.Integrate(m3);

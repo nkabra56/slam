@@ -22,11 +22,7 @@ std::unordered_map<TrackId, Eigen::Vector3d> VioFrontend::TriangulateTracks(
     left_points.push_back(track.point);
   }
 
-  // Rectified stereo pair: match left features into the right image with
-  // the same pyramidal KLT used for temporal tracking. This assumes
-  // moderate disparities (fine for KITTI's driving scenes); a stricter
-  // epipolar-constrained search is a reasonable follow-up, not required for
-  // this phase's raw trajectory.
+  // Match left features into the right (rectified) image via the same KLT.
   std::vector<cv::Point2f> right_points;
   std::vector<uchar> status;
   std::vector<float> error;
@@ -44,10 +40,7 @@ std::unordered_map<TrackId, Eigen::Vector3d> VioFrontend::TriangulateTracks(
 VioFrontend::FrameResult VioFrontend::ProcessStereoFrame(const StereoFrame& frame) {
   FrameResult result;
   result.imu_delta = imu_preintegrator_.result();
-  // ResetKeepingSeed, not Reset -- see its doc comment: this frontend gets
-  // fed one IMU sample per frame for KITTI's raw oxts data, and a plain
-  // Reset() would discard the continuity a single-sample-per-interval
-  // preintegration needs to ever produce a nonzero delta.
+  // ResetKeepingSeed, not Reset -- see its doc comment.
   imu_preintegrator_.ResetKeepingSeed();
 
   const auto& tracks = tracker_.Track(frame.left);

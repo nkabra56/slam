@@ -10,11 +10,8 @@
 
 namespace slam::sensors {
 
-// Reads a single KITTI odometry sequence directory, e.g. data/sequences/00,
-// with an optional ground-truth poses file (data/poses/00.txt) available for
-// sequences 00-10. Grayscale stereo (image_0/image_1) and Velodyne
-// (velodyne/) are supported; IMU/GPS (oxts/) parsing lands in a later phase
-// alongside the VIO frontend.
+// Reads a KITTI odometry sequence directory (e.g. data/sequences/00) with an
+// optional ground-truth poses file. Stereo + Velodyne only; see kitti_raw_imu.hpp for IMU.
 class KittiSequenceReader {
  public:
   explicit KittiSequenceReader(

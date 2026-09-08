@@ -10,16 +10,7 @@
 namespace slam::viz {
 
 // Minimal live 3D viewer for the trajectory + point-cloud map, built with
-// Pangolin. Opt-in (SLAM_BUILD_VIZ + the vcpkg "viz" manifest feature)
-// since it pulls in OpenGL/X11 dependencies nothing else in this project
-// needs, and is the one piece of this codebase that's fundamentally
-// unverifiable without an actual display and a person looking at it --
-// unlike everything else here (math with derivable, testable behavior),
-// there is no way to unit-test whether a window renders correctly. Build
-// and run it yourself before trusting it; see ROADMAP.md.
-//
-// Pangolin/OpenGL headers are kept out of this header (PIMPL) so nothing
-// that doesn't opt into SLAM_BUILD_VIZ ever needs to see them.
+// Pangolin. Opt-in (SLAM_BUILD_VIZ); PIMPL keeps Pangolin/OpenGL out of this header.
 class PangolinViewer {
  public:
   explicit PangolinViewer(std::string window_name = "slam");

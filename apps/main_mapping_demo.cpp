@@ -9,14 +9,8 @@
 #include "slam/mapping/map.hpp"
 #include "slam/sensors/kitti_dataset.hpp"
 
-// Runs VIO + LiDAR + backend over a KITTI sequence (as slam_backend_demo
-// does), then builds a world-frame point-cloud map from each keyframe's
-// triangulated VIO landmarks and LiDAR edge/planar features using the
-// FINAL globally-optimized poses (a two-pass approach: per-frame local
-// points are collected during the main loop, then transformed and merged
-// into the map only after OptimizeGlobally() -- so the map reflects
-// loop-closure corrections instead of the raw incremental poses), and
-// writes the result to a PLY file.
+// Runs VIO + LiDAR + backend, then builds a point-cloud map from the final
+// globally-optimized poses and writes it to a PLY file.
 int main(int argc, char** argv) {
   if (argc < 3) {
     std::cerr << "Usage: slam_mapping_demo <sequence_dir> <output.ply> [poses_file]\n";

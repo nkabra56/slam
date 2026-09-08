@@ -45,11 +45,7 @@ ScanFeatures ExtractFeatures(const LidarScan& scan, const FeatureExtractionParam
       Eigen::Vector3d sum = Eigen::Vector3d::Zero();
       for (int j = -w; j <= w; ++j) {
         if (j == 0) continue;
-        // The ring is a closed 360-degree loop, not a line -- wrap the
-        // neighbor index so points near the sort seam (wherever atan2's
-        // -pi/+pi discontinuity happens to fall for this particular ring)
-        // get a real curvature value like every other point, instead of
-        // being silently stuck at the sentinel and never selectable.
+        // Wrap: the ring is a closed loop, not a line (atan2 sort seam).
         const int neighbor = ((i + j) % n + n) % n;
         sum += ring[static_cast<std::size_t>(i)] - ring[static_cast<std::size_t>(neighbor)];
       }

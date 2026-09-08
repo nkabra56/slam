@@ -5,7 +5,7 @@
 #include "slam/sensors/kitti_dataset.hpp"
 
 // Smoke-test / usage example for KittiSequenceReader. Not a SLAM pipeline
-// yet -- that arrives as each phase in ROADMAP.md wires into slam_core.
+// yet -- the frontends and backend wire into slam_core separately.
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "Usage: slam_kitti_demo <sequence_dir> [poses_file]\n";

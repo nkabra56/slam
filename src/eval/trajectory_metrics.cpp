@@ -55,9 +55,7 @@ AbsoluteTrajectoryError ComputeAte(const std::vector<Sophus::SE3d>& estimated,
   centroid_est /= static_cast<double>(n);
   centroid_gt /= static_cast<double>(n);
 
-  // Kabsch/Horn closed-form rigid alignment: H = sum(p_i * q_i^T) over
-  // centered points, SVD(H) = U*S*V^T, R = V * diag(1,1,det(V*U^T)) * U^T
-  // (the diag correction rules out a reflection when det(V*U^T) < 0).
+  // Kabsch/Horn: SVD(H)=U*S*V^T, R=V*diag(1,1,det(V*U^T))*U^T (rules out reflection).
   Eigen::Matrix3d cross_covariance = Eigen::Matrix3d::Zero();
   for (std::size_t i = 0; i < n; ++i) {
     const Eigen::Vector3d p = estimated[i].translation() - centroid_est;

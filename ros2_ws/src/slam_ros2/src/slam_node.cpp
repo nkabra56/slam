@@ -146,14 +146,7 @@ void SlamNode::ProcessingLoop() {
 
     const rclcpp::Time stamp(job.left->header.stamp);
 
-    // Feed every buffered IMU sample up to this frame's timestamp before
-    // processing the frame -- matches VioFrontend::ProcessStereoFrame's
-    // calling convention (see the KITTI demo apps: ProcessImu, then
-    // ProcessStereoFrame, so the returned imu_delta covers exactly the
-    // interval since the previous frame). Also feeds the same samples into
-    // optimizer_ (TightlyCoupledOptimizer::AddImuMeasurement), matching
-    // the AddImuMeasurement-then-AddKeyframe convention the KITTI tightly-
-    // coupled demo uses.
+    // Feed every buffered IMU sample up to this frame's timestamp first.
     {
       std::lock_guard<std::mutex> lock(imu_mutex_);
       while (!pending_imu_.empty() && rclcpp::Time(pending_imu_.front()->header.stamp) <= stamp) {
@@ -193,10 +186,7 @@ void SlamNode::ProcessingLoop() {
     const auto node_id = optimizer_.AddKeyframe(vio_edge, lidar_edge, lidar_features_for_map);
     const auto& nav_state = optimizer_.StateOf(node_id);
     const Sophus::SE3d pose = nav_state.pose;
-    // Real fused velocity once tightly-coupled initialization has
-    // succeeded (see TightlyCoupledOptimizer::IsInitialized); zero before
-    // that, same as SlidingWindowOptimizer's pose-only stage would give --
-    // no velocity state exists yet to publish.
+    // Zero until tightly-coupled initialization succeeds.
     const Eigen::Vector3d velocity = optimizer_.IsInitialized() ? nav_state.velocity
                                                                  : Eigen::Vector3d::Zero();
 

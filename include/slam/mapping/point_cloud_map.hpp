@@ -8,14 +8,8 @@
 
 namespace slam::mapping {
 
-// Incremental voxel-grid point-cloud accumulator: each inserted point
-// merges (running centroid) into its voxel of size `voxel_size`, bounding
-// memory regardless of how many points or Insert() calls accumulate over a
-// full sequence. Same hash-grid technique as
-// frontend_lidar::VoxelDownsample, but stateful across many calls rather
-// than a one-shot pass over a single point set -- a small enough piece
-// that duplicating it here was simpler than adding a cross-module
-// dependency between mapping/ and frontend_lidar/ for it.
+// Incremental voxel-grid accumulator: each point merges (running centroid)
+// into its voxel, bounding memory across many Insert() calls.
 class PointCloudMap {
  public:
   explicit PointCloudMap(double voxel_size);

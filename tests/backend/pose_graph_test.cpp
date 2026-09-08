@@ -30,16 +30,13 @@ TEST(PoseGraph, TwoNodeEdgeConvergesToMeasurement) {
   graph.FixNode(n0);
   graph.Solve();
 
-  // n0 is fixed at identity, so n1 should converge to identity * z^-1 (the
-  // relation the PoseGraphEdge convention implies -- see its doc comment).
+  // n1 should converge to identity * z^-1, per PoseGraphEdge's convention.
   const Sophus::SE3d expected = Sophus::SE3d() * z.inverse();
   const Sophus::SE3d error = expected.inverse() * graph.Pose(n1);
   EXPECT_LT(error.log().norm(), 1e-6);
 }
 
-// Ground-truth hexagon with vertex 0 pinned to the origin (matching the
-// solver's default gauge-fix at node 0), so absolute-position comparisons
-// against ground truth are meaningful.
+// Hexagon with vertex 0 pinned to the origin, matching the solver's gauge-fix.
 std::vector<Sophus::SE3d> MakeHexagonGroundTruth(double radius) {
   std::vector<Eigen::Vector3d> positions;
   for (int k = 0; k < 6; ++k) {

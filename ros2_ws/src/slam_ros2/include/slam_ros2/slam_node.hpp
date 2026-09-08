@@ -28,27 +28,8 @@
 
 namespace slam_ros2 {
 
-// Wraps the VIO/LiDAR/backend/mapping pipeline (slam_core) as a ROS2 node
-// -- the live/bag-playback counterpart to the KITTI demo apps. Backed by
-// TightlyCoupledOptimizer (Phase 6A, tightly_coupled_optimizer.hpp) rather
-// than the loosely-coupled SlidingWindowOptimizer, so /odometry carries a
-// real fused velocity once IMU-based initialization succeeds (see
-// TightlyCoupledOptimizer::IsInitialized) instead of always publishing
-// zero. Subscription callbacks only buffer messages; a dedicated
-// processing thread does the actual SLAM work, so a slow frame never
-// silently starves the executor. See PHASE6_PLAN.md section 3.4 for the
-// reasoning behind that split, and section 3.5 for the coordinate-frame
-// conversion this node publishes through (message_adapters.hpp's
-// ToOdometryMsg/ToPointCloud2).
-//
-// Read this before trusting it: this file has never been built against a
-// real ROS2 install, and unlike slam_core's math (which could be
-// hand-derived and cross-checked against its own residual formulas), it
-// combines several ROS2 library surfaces (rclcpp, message_filters,
-// tf2_ros, cv_bridge) that can only be written from documented API
-// knowledge, not verified the same way. Treat it as a real, complete
-// attempt at the design in PHASE6_PLAN.md section 3.4 -- not as
-// build-verified code the rest of this project's math generally is.
+// Wraps the VIO/LiDAR/backend/mapping pipeline as a live ROS2 node.
+// Callbacks only buffer; a dedicated thread does the SLAM work.
 class SlamNode : public rclcpp::Node {
  public:
   SlamNode();
@@ -78,7 +59,6 @@ class SlamNode : public rclcpp::Node {
   void ProcessingLoop();
   sensor_msgs::msg::PointCloud2::ConstSharedPtr TakeNearestLidarScan(const rclcpp::Time& stereo_stamp);
 
-  // --- Subscriptions ---
   message_filters::Subscriber<sensor_msgs::msg::Image> left_image_sub_;
   message_filters::Subscriber<sensor_msgs::msg::Image> right_image_sub_;
   using StereoSyncPolicy =
@@ -90,20 +70,18 @@ class SlamNode : public rclcpp::Node {
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr points_sub_;
 
-  // --- Publishers ---
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_pub_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
-  // --- SLAM pipeline state -- only ever touched from processing_thread_ ---
+  // Only ever touched from processing_thread_.
   std::optional<slam::frontend_vio::VioFrontend> vio_;
   slam::frontend_lidar::LidarFrontend lidar_;
   slam::backend::TightlyCoupledOptimizer optimizer_;
   slam::mapping::Map map_;
   nav_msgs::msg::Path path_;
 
-  // --- Cross-thread state ---
   std::mutex calibration_mutex_;
   std::optional<sensor_msgs::msg::CameraInfo> left_info_;
   std::optional<sensor_msgs::msg::CameraInfo> right_info_;

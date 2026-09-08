@@ -62,10 +62,7 @@ TEST(ComputeKittiOdometryError, ZeroErrorForIdenticalTrajectories) {
 }
 
 TEST(ComputeKittiOdometryError, DetectsScaleError) {
-  // gt moves 10m/step, estimate moves 11m/step -- a clean, hand-verifiable
-  // 10% scale error: over any 100m ground-truth segment (10 steps), the
-  // true relative translation is 100m and the estimated one is 110m, so
-  // the error is exactly 10m / 100m = 10%.
+  // gt moves 10m/step, estimate 11m/step -- a clean 10% scale error.
   std::vector<Sophus::SE3d> ground_truth;
   std::vector<Sophus::SE3d> estimated;
   Eigen::Vector3d gt_position = Eigen::Vector3d::Zero();

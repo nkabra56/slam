@@ -92,9 +92,7 @@ slam::StereoCalibration ToStereoCalibration(const sensor_msgs::msg::CameraInfo& 
 
 Eigen::Matrix3d OpticalToBaseRotation() {
   Eigen::Matrix3d R;
-  // base_x (forward) = optical_z (forward)
-  // base_y (left)    = -optical_x (right)
-  // base_z (up)      = -optical_y (down)
+  // base(x,y,z)=(forward,left,up) = optical(z,-x,-y).
   // clang-format off
   R <<  0,  0,  1,
        -1,  0,  0,

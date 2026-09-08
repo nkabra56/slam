@@ -10,14 +10,8 @@
 #include "slam/sensors/kitti_dataset.hpp"
 #include "slam/viz/pangolin_viewer.hpp"
 
-// Live Pangolin viewer over VIO + LiDAR + backend fusion. Unlike
-// slam_mapping_demo (which waits for OptimizeGlobally() so its exported
-// map reflects loop-closure corrections), this shows the trajectory and
-// map growing incrementally, frame by frame -- what a live operator would
-// actually see.
-//
-// This is the one demo in the project that can't be verified without a
-// display; see PangolinViewer's class doc comment.
+// Live Pangolin viewer over VIO + LiDAR + backend fusion, growing the
+// trajectory and map incrementally frame by frame.
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "Usage: slam_viz_demo <sequence_dir> [poses_file]\n";

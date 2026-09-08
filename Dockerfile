@@ -1,22 +1,11 @@
 # Multi-stage build for the slam project.
 #
 #   docker build --target runtime -t slam:runtime .   (default target)
-#   docker build --target ros2    -t slam:ros2 .      (adds the Phase 6
-#                                                       Part B ROS2 overlay)
+#   docker build --target ros2    -t slam:ros2 .      (adds the ROS2 overlay)
 #
-# The `deps` stage does the actual C++ build AND runs the full test suite
-# (`ctest`) as part of the image build -- a successful `docker build` is
-# therefore real build+test verification of this project, something it did
-# not have before this Dockerfile existed (everything up to this point was
-# written and reasoned through without a compiler in the loop). If any
-# test fails, the build fails.
-#
-# Caveat: none of this has been built here -- this environment has no
-# Docker install. Written from documented apt/vcpkg/ROS2 packaging
-# conventions (base image tags, apt package names), which is a different,
-# generally lower-risk kind of unverified than slam_node.cpp's ROS2 C++
-# library API usage (see ROADMAP.md's Phase 6 section) -- but it is still
-# unverified until someone actually runs `docker build`.
+# The `deps` stage builds slam_core + apps and runs the full test suite
+# (`ctest`) as part of the image build -- `docker build` fails if any test
+# fails.
 
 # ---------------------------------------------------------------------------
 # Stage: deps -- builds slam_core + apps and runs the test suite.
@@ -86,11 +75,9 @@ WORKDIR /data
 CMD ["/bin/bash"]
 
 # ---------------------------------------------------------------------------
-# Stage: ros2 -- the Phase 6 Part B ROS2 overlay (ros2_ws/src/slam_ros2),
-# built against the `deps` stage's installed slam_core. See
-# PHASE6_PLAN.md section 3.6 for the find_package(slam CONFIG REQUIRED)
-# design this relies on, and ROADMAP.md's Phase 6 section for why
-# slam_node.cpp specifically carries more risk than everything else here.
+# Stage: ros2 -- the ROS2 overlay (ros2_ws/src/slam_ros2), built against the
+# `deps` stage's installed slam_core via find_package(slam CONFIG REQUIRED)
+# (see PHASE6_PLAN.md section 3.6).
 # ---------------------------------------------------------------------------
 FROM ros:humble-ros-base AS ros2
 
@@ -104,16 +91,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=deps /opt/slam /opt/slam
 # slamConfig.cmake's find_dependency(Eigen3/Sophus/OpenCV) needs these
-# findable too -- they were installed by vcpkg into the deps stage, not by
-# `cmake --install` (which only exports slam_core itself). Copying vcpkg's
-# whole installed tree keeps slam_core linked against the exact same
-# OpenCV/Eigen3/Sophus build it was compiled against, rather than mixing
-# it with a different OpenCV version off apt (e.g. the one
-# ros-humble-cv-bridge pulls in below) -- see README.md's ROS2 section for
-# the residual risk this doesn't eliminate: cv_bridge itself is a prebuilt
-# binary linked against apt's OpenCV, so a cv::Mat crossing from cv_bridge
-# into slam_core still crosses an OpenCV-build boundary. Untested until a
-# real image message flows through that path.
+# findable too; `cmake --install` only exports slam_core itself, so copy
+# vcpkg's installed tree to keep slam_core linked against the exact OpenCV
+# build it was compiled against, not apt's (e.g. cv_bridge's below --
+# a cv::Mat crossing that boundary still spans two OpenCV builds).
 COPY --from=deps /workspace/vcpkg_installed/x64-linux /opt/vcpkg_installed/x64-linux
 
 WORKDIR /ros2_ws

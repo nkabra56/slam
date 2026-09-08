@@ -28,20 +28,8 @@ void PrintRow(const std::string& name, const slam::eval::AbsoluteTrajectoryError
 
 }  // namespace
 
-// Runs the VIO-only, LiDAR-only, backend-fused (incremental), and
-// backend-fused (globally re-optimized) trajectories over a KITTI sequence
-// with ground truth, and prints ATE + the official KITTI odometry
-// evaluation protocol (avg translation/rotation error over 100-800m
-// segments) for each -- the tooling behind ROADMAP.md's Phase 5 comparison
-// table. It does not fabricate numbers for that table itself: this project
-// has never been build-verified in the environment it was written in, so
-// run this against a real downloaded sequence to get real ones.
-//
-// If a raw KITTI dataset root is given, also runs a fifth "Tightly-coupled"
-// trajectory via TightlyCoupledOptimizer (Phase 6A) alongside the other
-// four -- the same "does fusion actually help" comparison this table
-// already gives the loosely-coupled backend, extended to the tightly-
-// coupled one. Without it, this demo runs exactly as before.
+// Runs VIO-only, LiDAR-only, and fused trajectories over a KITTI sequence,
+// printing ATE + KITTI odometry error for each.
 int main(int argc, char** argv) {
   if (argc < 3) {
     std::cerr << "Usage: slam_eval_demo <sequence_dir> <poses_file> [raw_kitti_root]\n";

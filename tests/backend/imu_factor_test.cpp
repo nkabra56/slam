@@ -35,9 +35,7 @@ TEST(ImuPreintegration, BiasCorrectedMatchesDirectIntegrationWithSameBias) {
 }
 
 TEST(ImuPreintegration, ZeroBiasMatchesFrontendVioPreintegratorFormula) {
-  // Sanity check that this class's recursion is the same one
-  // frontend_vio::ImuPreintegrator uses (just parameterized by a bias),
-  // via the same closed-form single-step check that class's own tests use.
+  // Same recursion as frontend_vio::ImuPreintegrator, parameterized by bias.
   ImuPreintegration preintegration;
   ImuMeasurement first;
   first.timestamp = 0.0;
@@ -52,9 +50,7 @@ TEST(ImuPreintegration, ZeroBiasMatchesFrontendVioPreintegratorFormula) {
   EXPECT_NEAR(preintegration.DeltaPosition().x(), 0.5, 1e-9);
 }
 
-// Builds a NavState pair (state_i, state_j) that exactly satisfies the IMU
-// factor's noise-free kinematics for a given synthetic preintegration and
-// gravity -- i.e. the inverse of ComputeImuFactorResidual's formulas.
+// Builds a NavState pair satisfying the IMU factor's noise-free kinematics.
 struct SyntheticImuSegment {
   ImuPreintegration preintegration;
   NavState state_i;

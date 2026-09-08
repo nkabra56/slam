@@ -14,13 +14,8 @@ namespace slam::backend {
 
 using NavNodeId = std::size_t;
 
-// A VIO/LiDAR-style relative-pose constraint applied to the pose
-// sub-block (tangent dims 0-5) of two NavState nodes. Same measurement
-// convention and residual formula as PoseGraphEdge (pose_graph.hpp) --
-// p_to = measurement * p_from, residual = Log(measurement^-1 * T_to^-1 *
-// T_from) -- reused rather than re-derived: this is a "where does this
-// residual go in a bigger state" placement problem, not new math. See
-// PHASE6_PLAN.md section 2.7.
+// Relative-pose constraint on the pose sub-block (tangent dims 0-5) of two
+// NavState nodes; same convention as PoseGraphEdge.
 struct NavPoseEdge {
   NavNodeId from{};
   NavNodeId to{};
@@ -28,10 +23,8 @@ struct NavPoseEdge {
   Eigen::Matrix<double, 6, 6> information{Eigen::Matrix<double, 6, 6>::Identity()};
 };
 
-// A full IMU factor (imu_factor.hpp) between two NavState nodes. Two
-// separate information matrices because the motion residual (rotation/
-// velocity/position, from sensor noise) and the bias-random-walk residual
-// (from bias drift over time) have genuinely different noise sources.
+// IMU factor between two NavState nodes. Separate information matrices for
+// the motion residual and the bias-random-walk residual (different noise sources).
 struct NavImuEdge {
   NavNodeId from{};
   NavNodeId to{};
@@ -40,13 +33,8 @@ struct NavImuEdge {
   Eigen::Matrix<double, 6, 6> bias_information{Eigen::Matrix<double, 6, 6>::Identity()};
 };
 
-// 15-DOF analogue of PoseGraph (pose_graph.hpp) for the tightly-coupled
-// case where keyframes carry velocity and IMU bias alongside pose. A
-// deliberately separate class rather than a generalized variable-dimension
-// graph -- see PHASE6_PLAN.md section 2.7 for why. Same solving strategy
-// as PoseGraph: dense Gauss-Newton, numerical (central-difference)
-// Jacobians, for the same reason PoseGraph uses them (no compiler in this
-// project's environment to empirically verify an analytic derivation).
+// 15-DOF analogue of PoseGraph for keyframes carrying velocity and IMU bias.
+// Dense Gauss-Newton with numerical Jacobians, same as PoseGraph.
 class NavStateGraph {
  public:
   struct SolveParams {

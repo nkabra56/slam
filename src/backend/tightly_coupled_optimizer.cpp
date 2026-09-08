@@ -17,13 +17,7 @@ void TightlyCoupledOptimizer::AddImuMeasurement(const ImuMeasurement& measuremen
   if (!imu_since_last_keyframe_.has_value()) {
     imu_since_last_keyframe_.emplace();
     if (last_imu_sample_.has_value()) {
-      // Seeds continuity across the keyframe boundary: this call only sets
-      // ImuPreintegration's internal "previous sample," it contributes no
-      // delta by itself (see ImuPreintegration::Integrate). The next real
-      // call below then integrates from this boundary sample to the new
-      // one, exactly the "single preintegration step per keyframe
-      // interval" ROADMAP.md describes for KITTI's one-sample-per-frame
-      // raw oxts data.
+      // Seeds continuity across the keyframe boundary; contributes no delta itself.
       imu_since_last_keyframe_->Integrate(*last_imu_sample_);
     }
   }
@@ -119,9 +113,7 @@ NavNodeId TightlyCoupledOptimizer::AddKeyframe(const EdgeMeasurement& vio_edge,
   } else {
     const NavNodeId prev_id = keyframes_.size() - 1;
 
-    // Seed the new node's pose the same way SlidingWindowOptimizer does
-    // (prefer LiDAR, denser geometric constraint, over VIO); carry over
-    // the previous node's velocity/bias as a warm-start guess.
+    // Prefer LiDAR over VIO; carry over previous velocity/bias as a warm start.
     const Sophus::SE3d seed_relative =
         lidar_edge.valid ? lidar_edge.relative_pose
         : vio_edge.valid ? vio_edge.relative_pose
@@ -169,11 +161,8 @@ NavNodeId TightlyCoupledOptimizer::AddKeyframe(const EdgeMeasurement& vio_edge,
   keyframes_.push_back(KeyframeRecord{graph_.State(new_id).pose.translation(), lidar_features});
   TryDetectLoopClosure(new_id, lidar_features);
 
-  // Solve with the newly added node/edges before TryInitialize() reads
-  // window poses -- otherwise the just-added node still holds its raw seed
-  // guess (correct only up to translation for a pure-translation seed
-  // formula; wrong once the chain has real rotation), which poisons
-  // InitializeVio's linear system.
+  // Solve before TryInitialize() reads window poses, or the just-added node
+  // still holds its raw (rotation-wrong) seed guess.
   FreezeOutsideWindow();
   graph_.Solve();
 

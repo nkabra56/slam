@@ -5,7 +5,7 @@
 #include "slam/frontend_lidar/lidar_frontend.hpp"
 #include "slam/sensors/kitti_dataset.hpp"
 
-// Runs the Phase 2 LiDAR frontend over a KITTI sequence's Velodyne scans and
+// Runs the LiDAR frontend over a KITTI sequence's Velodyne scans and
 // prints the raw (unoptimized) chained trajectory.
 int main(int argc, char** argv) {
   if (argc < 2) {

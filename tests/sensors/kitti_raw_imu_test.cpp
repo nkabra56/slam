@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 
 std::string ZeroPadded(std::size_t index) {
   std::ostringstream oss;
-  oss << std::setw(6) << std::setfill('0') << index;
+  oss << std::setw(10) << std::setfill('0') << index;
   return oss.str();
 }
 

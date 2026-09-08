@@ -8,16 +8,8 @@
 #include "slam/sensors/kitti_dataset.hpp"
 #include "slam/sensors/kitti_raw_imu.hpp"
 
-// Runs the VIO and LiDAR frontends together over a KITTI sequence, feeding
-// both into the Phase 3 sliding-window pose-graph backend, and prints the
-// fused trajectory. Calls OptimizeGlobally() at the end for a final,
-// loop-closure-corrected pass over the whole sequence.
-//
-// If a raw KITTI dataset root is given, also wires real IMU data (via
-// KittiOxtsReader) into the backend as a rotation-only edge -- see
-// SlidingWindowOptimizer::AddKeyframe and ROADMAP.md's IMU section for what
-// that does and doesn't cover. Without it, the demo runs exactly as before
-// (VIO + LiDAR only).
+// Runs VIO + LiDAR through the sliding-window backend and prints the fused
+// trajectory. With a raw KITTI root, also feeds real IMU.
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "Usage: slam_backend_demo <sequence_dir> [poses_file] [raw_kitti_root]\n";
@@ -59,9 +51,6 @@ int main(int argc, char** argv) {
 
     for (std::size_t i = 0; i < reader.NumFrames(); ++i) {
       if (oxts_reader.has_value() && i < oxts_reader->NumMeasurements()) {
-        // Feeding this frame's sample before ProcessStereoFrame means the
-        // FrameResult.imu_delta it returns covers exactly the interval
-        // since the previous frame -- see VioFrontend::ProcessStereoFrame.
         vio.ProcessImu(oxts_reader->MeasurementAt(i));
       }
 

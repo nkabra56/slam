@@ -8,12 +8,8 @@
 #include "slam/sensors/kitti_dataset.hpp"
 #include "slam/sensors/kitti_raw_imu.hpp"
 
-// Phase 6A tightly-coupled fusion demo: like slam_backend_demo, but backed
-// by TightlyCoupledOptimizer (15-DOF NavState + a real bias/gravity-aware
-// IMU factor, see tightly_coupled_optimizer.hpp) instead of
-// SlidingWindowOptimizer's rotation-only IMU regularizer. Requires a raw
-// KITTI dataset root -- without real IMU data there's nothing for this
-// class to do beyond what slam_backend_demo already covers.
+// Like slam_backend_demo, but backed by TightlyCoupledOptimizer. Requires a
+// raw KITTI dataset root for real IMU data.
 int main(int argc, char** argv) {
   if (argc < 3) {
     std::cerr << "Usage: slam_tightly_coupled_demo <sequence_dir> <raw_kitti_root> [poses_file]\n";

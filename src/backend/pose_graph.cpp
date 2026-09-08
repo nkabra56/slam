@@ -36,9 +36,7 @@ std::size_t PoseGraph::NumNodes() const { return poses_.size(); }
 int PoseGraph::Solve(const SolveParams& params) {
   if (poses_.empty() || edges_.empty()) return 0;
 
-  // Gauge-fix locally (not persisted to fixed_): without at least one fixed
-  // node, the whole graph can float/rotate arbitrarily and still satisfy
-  // every *relative* constraint identically.
+  // Without a fixed node the whole graph can float/rotate arbitrarily.
   std::vector<bool> fixed = fixed_;
   if (std::none_of(fixed.begin(), fixed.end(), [](bool f) { return f; })) {
     fixed[0] = true;

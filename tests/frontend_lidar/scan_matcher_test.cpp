@@ -8,9 +8,7 @@
 namespace slam::frontend_lidar {
 namespace {
 
-// Points share z=0 exactly, so any three non-collinear ones define a plane
-// with normal exactly (0,0,1); the (x,y) jitter just breaks lattice
-// alignment so nearest-neighbor triples aren't collinear.
+// z=0 exactly (normal is (0,0,1)); (x,y) jitter avoids collinear triples.
 std::vector<Eigen::Vector3d> MakeJitteredPlane(int nx, int ny, double spacing) {
   std::vector<Eigen::Vector3d> points;
   for (int i = 0; i < nx; ++i) {

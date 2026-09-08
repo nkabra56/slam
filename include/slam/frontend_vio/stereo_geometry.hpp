@@ -11,9 +11,8 @@
 
 namespace slam::frontend_vio {
 
-// Triangulates a single stereo correspondence (already rectified, so the
-// epipolar lines are horizontal) into a 3D point in the left camera frame.
-// Returns std::nullopt for degenerate/negative/too-far disparity.
+// Triangulates a rectified stereo correspondence into the left camera frame.
+// Returns nullopt for degenerate/negative/too-far disparity.
 std::optional<Eigen::Vector3d> TriangulateStereoPoint(const cv::Point2f& left_point,
                                                         const cv::Point2f& right_point,
                                                         const StereoCalibration& calibration);
@@ -25,10 +24,8 @@ struct RelativePoseEstimate {
   int num_inliers{0};
 };
 
-// Solves PnP+RANSAC for the pose of the camera that observed `image_points`,
-// given the same landmarks' 3D coordinates (`object_points`) in some
-// reference camera frame. Returns std::nullopt if PnP fails or there aren't
-// enough inliers to trust the estimate.
+// PnP+RANSAC for the observing camera's pose given 3D object_points in a
+// reference frame. Returns nullopt if PnP fails or inliers are too few.
 std::optional<RelativePoseEstimate> EstimateRelativePose(
     const std::vector<cv::Point3d>& object_points, const std::vector<cv::Point2f>& image_points,
     const CameraIntrinsics& intrinsics, int min_inliers = 6);

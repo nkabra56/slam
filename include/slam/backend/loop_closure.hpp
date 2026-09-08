@@ -35,15 +35,8 @@ struct LoopClosureParams {
   int min_edge_correspondences = 5;
 };
 
-// Geometric-proximity loop closure: among `candidates` whose position is
-// within `proximity_radius_m` of the query and whose node id is at least
-// `min_node_gap` behind it, tries registering the query's LiDAR features
-// against each with frontend_lidar::MatchScans, and returns the match with
-// the most correspondences if it clears the minimum thresholds.
-//
-// Deliberately geometric-proximity + scan-registration verification, not
-// appearance-based place recognition (bag-of-visual-words/Scan Context) --
-// that's a larger undertaking left for future work. See ROADMAP.md.
+// Geometric-proximity loop closure via MatchScans against nearby,
+// sufficiently-old candidates.
 std::optional<LoopClosureResult> DetectLoopClosure(
     const std::vector<LoopClosureCandidateSource>& candidates,
     const frontend_lidar::ScanFeatures& query_features, const Eigen::Vector3d& query_position,

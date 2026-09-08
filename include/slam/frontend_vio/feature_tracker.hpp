@@ -14,11 +14,8 @@ struct TrackedFeature {
   cv::Point2f point;
 };
 
-// Detects Shi-Tomasi corners and tracks them frame-to-frame with pyramidal
-// KLT optical flow, replenishing new corners whenever the live track count
-// drops below a minimum. Track IDs are stable across calls to Track(), so
-// callers can match a feature's 3D landmark (from a previous frame) to its
-// current 2D observation.
+// Shi-Tomasi corners tracked via pyramidal KLT, replenished below min_tracks.
+// Track IDs are stable across Track() calls.
 class FeatureTracker {
  public:
   struct Params {
@@ -31,9 +28,7 @@ class FeatureTracker {
   FeatureTracker() : FeatureTracker(Params{}) {}
   explicit FeatureTracker(Params params);
 
-  // Tracks existing features into `image` and tops up with fresh corners
-  // when the live count falls below Params::min_tracks. Returns the live
-  // tracks after this update.
+  // Tracks into `image`, tops up below min_tracks. Returns the live tracks.
   const std::vector<TrackedFeature>& Track(const cv::Mat& image);
 
   const std::vector<TrackedFeature>& tracks() const { return tracks_; }

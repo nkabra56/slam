@@ -9,11 +9,8 @@ namespace {
 constexpr int kGyroBiasIterations = 10;
 constexpr double kGyroBiasNumericalStep = 1e-6;
 
-// Small (3-unknown) Gauss-Newton solve for the constant gyro bias that
-// best explains the mismatch between each pair's preintegrated rotation
-// and the poses' actual relative rotation. Numeric Jacobian, same
-// reasoning as everywhere else in this project that touches an
-// SE3/SO3-adjacent derivative -- see imu_factor.hpp's class doc comment.
+// 3-unknown Gauss-Newton for the constant gyro bias best explaining the
+// preintegrated-vs-actual rotation mismatch. Numeric Jacobian.
 Eigen::Vector3d EstimateGyroBias(const std::vector<Sophus::SE3d>& poses,
                                   const std::vector<ImuPreintegration>& preintegrations) {
   const std::size_t n = preintegrations.size();
@@ -72,11 +69,8 @@ std::optional<VioInitializationResult> InitializeVio(
     corrected.push_back(p.BiasCorrected(ImuBias{gyro_bias, Eigen::Vector3d::Zero()}));
   }
 
-  // Linear system in unknowns x = [v_0, v_1, ..., v_{N-1}, gravity], from
-  // the (noise-free) IMU kinematics relations -- see ComputeImuFactorResidual
-  // in imu_factor.cpp for the same relations this is the linear inverse of:
-  //   v_{i+1} - v_i - g*dt        = R_i * Delta_v_i               (Eq A)
-  //   v_i*dt  + 0.5*g*dt^2        = (p_{i+1}-p_i) - R_i*Delta_p_i (Eq B)
+  // Linear system in x = [v_0, ..., v_{N-1}, gravity]:
+  //   v_{i+1} - v_i - g*dt = R_i*Delta_v_i;  v_i*dt + 0.5*g*dt^2 = (p_{i+1}-p_i) - R_i*Delta_p_i
   const int num_unknowns = static_cast<int>(3 * num_poses + 3);
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(static_cast<int>(6 * n), num_unknowns);
   Eigen::VectorXd rhs = Eigen::VectorXd::Zero(static_cast<int>(6 * n));

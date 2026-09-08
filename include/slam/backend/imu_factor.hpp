@@ -15,19 +15,8 @@ struct ImuBias {
   Eigen::Vector3d accel{Eigen::Vector3d::Zero()};
 };
 
-// Bias-aware IMU preintegration between two keyframes -- integrates
-// (gyro - bias.gyro) and (accel - bias.accel) with the same
-// forward-Euler recursion frontend_vio::ImuPreintegrator uses for the
-// zero-bias case, but against a supplied linearization bias.
-//
-// Deliberately does NOT propagate an analytic bias-Jacobian the way the
-// SLAM literature (Forster et al., "On-Manifold Preintegration for
-// Real-Time Visual-Inertial Odometry", T-RO 2017) does. Correcting for a
-// changed bias estimate is done by re-integrating the retained raw
-// measurement buffer (BiasCorrected()) instead -- real runtime cost, in
-// exchange for math that doesn't have to be trusted without a compiler to
-// check it against. See PHASE6_PLAN.md section 2.3 for the reasoning and
-// the (documented, not implemented) analytic alternative.
+// Bias-aware IMU preintegration; corrects for a changed bias by
+// re-integrating raw measurements (BiasCorrected()), not an analytic Jacobian.
 class ImuPreintegration {
  public:
   explicit ImuPreintegration(ImuBias linearization_bias = {});
@@ -57,14 +46,8 @@ class ImuPreintegration {
   ImuMeasurement previous_{};
 };
 
-// Residual for the factor connecting NavState nodes i ("from") and j
-// ("to") via `preintegration`. `gravity` is the fixed world-frame gravity
-// vector (see VioInitializer for how it's estimated). Residual layout:
-// motion = (rotation error (3), velocity error (3), position error (3));
-// bias_random_walk = (gyro bias drift (3), accel bias drift (3)). Both
-// are zero when state_i/state_j exactly satisfy the IMU kinematics
-// implied by `preintegration` and `gravity`. See PHASE6_PLAN.md section
-// 2.3 for the derivation.
+// Residual connecting NavState i->j via `preintegration` and world `gravity`.
+// motion = (rotation, velocity, position error); zero when consistent.
 struct ImuFactorResidual {
   Eigen::Matrix<double, 9, 1> motion{Eigen::Matrix<double, 9, 1>::Zero()};
   Eigen::Matrix<double, 6, 1> bias_random_walk{Eigen::Matrix<double, 6, 1>::Zero()};

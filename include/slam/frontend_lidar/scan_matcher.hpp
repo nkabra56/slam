@@ -23,16 +23,8 @@ struct ScanMatcherParams {
   double max_planar_correspondence_dist = 1.0;  // meters
 };
 
-// Point-to-line (edge features) / point-to-plane (planar features)
-// Gauss-Newton scan matching, LOAM-style: for each source feature point,
-// find its nearest neighbor(s) in the target's k-d tree (KdTree3d), form a
-// line/plane residual, and solve the 6-DoF normal equations on the SE3 Lie
-// algebra (Sophus) each iteration. No PCL/g2o/Ceres -- correspondence
-// search and the least-squares solve are both hand-written over Eigen.
-//
-// `initial_guess` seeds the iteration; identity is fine for small
-// inter-frame motion. Returns std::nullopt if there aren't enough total
-// correspondences (< 6) to solve the 6-DoF system in some iteration.
+// LOAM-style point-to-line/point-to-plane Gauss-Newton scan matching over
+// SE3. Returns nullopt if any iteration has fewer than 6 correspondences.
 std::optional<ScanMatchResult> MatchScans(const ScanFeatures& source, const ScanFeatures& target,
                                            const Sophus::SE3d& initial_guess = Sophus::SE3d(),
                                            const ScanMatcherParams& params = {});

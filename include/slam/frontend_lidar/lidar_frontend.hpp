@@ -8,10 +8,8 @@
 
 namespace slam::frontend_lidar {
 
-// Frame-to-frame LiDAR odometry: extracts LOAM-style edge/planar features
-// from each scan (ExtractFeatures), lightly voxel-downsamples them, and
-// registers against the previous scan's features with the hand-written
-// point-to-line/point-to-plane Gauss-Newton solve in scan_matcher.hpp.
+// Frame-to-frame LiDAR odometry: extracts LOAM features per scan, then
+// registers against the previous scan's features via scan_matcher.hpp.
 class LidarFrontend {
  public:
   struct FrameResult {
@@ -26,9 +24,7 @@ class LidarFrontend {
 
   FrameResult ProcessScan(const LidarScan& scan);
 
-  // Features extracted from the most recently processed scan (post
-  // voxel-downsample) -- exposed so callers (e.g. the backend's loop
-  // closure) can reuse them without re-running feature extraction.
+  // Features from the most recently processed scan, post voxel-downsample.
   const ScanFeatures& LastFeatures() const { return previous_features_; }
 
  private:

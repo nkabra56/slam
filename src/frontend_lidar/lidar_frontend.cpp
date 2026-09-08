@@ -25,9 +25,7 @@ LidarFrontend::FrameResult LidarFrontend::ProcessScan(const LidarScan& scan) {
   ScanFeatures features = Downsample(ExtractFeatures(scan, feature_params_));
 
   if (has_previous_scan_) {
-    // source = previous scan, target = current scan, so the recovered pose
-    // maps "previous scan frame -> current scan frame", matching
-    // VioFrontend's convention.
+    // source=previous, target=current, matching VioFrontend's convention.
     if (const auto match =
             MatchScans(previous_features_, features, Sophus::SE3d(), matcher_params_)) {
       result.relative_pose = match->pose;

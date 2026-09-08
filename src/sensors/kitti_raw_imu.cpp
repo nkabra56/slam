@@ -18,9 +18,7 @@ struct SequenceMappingEntry {
   std::size_t start_frame;
 };
 
-// Verified against the official odometry devkit's sequence-to-raw mapping
-// table (cross-checked two independent devkit mirrors); see
-// KittiRawDriveMapping's doc comment.
+// Per the official odometry devkit's sequence-to-raw mapping table.
 constexpr std::array<SequenceMappingEntry, 11> kSequenceMapping{{
     {"00", "2011_10_03", "2011_10_03_drive_0027", 0},
     {"01", "2011_10_03", "2011_10_03_drive_0042", 0},
@@ -41,12 +39,8 @@ std::string ZeroPadded(std::size_t index, int width = 6) {
   return oss.str();
 }
 
-// Days since 1970-01-01 for a proleptic Gregorian y-m-d. The well-known
-// branchless algorithm from Howard Hinnant's "chrono-Compatible Low-Level
-// Date Algorithms" -- used instead of timegm/_mkgmtime to avoid relying on
-// a libc extension that isn't uniformly available across the Linux/Windows
-// CI matrix without extra feature-test-macro juggling. Verified against
-// its defining property: DaysFromCivil(1970, 1, 1) == 0.
+// Days since 1970-01-01 (Hinnant's branchless algorithm) -- avoids
+// timegm/_mkgmtime, which aren't uniformly available cross-platform.
 long long DaysFromCivil(long long y, int m, int d) {
   y -= (m <= 2) ? 1 : 0;
   const long long era = (y >= 0 ? y : y - 399) / 400;
@@ -114,7 +108,7 @@ std::size_t KittiOxtsReader::NumMeasurements() const { return timestamps_.size()
 
 ImuMeasurement KittiOxtsReader::MeasurementAt(std::size_t index) const {
   const std::size_t raw_index = start_frame_ + index;
-  const std::filesystem::path path = oxts_dir_ / "data" / (ZeroPadded(raw_index) + ".txt");
+  const std::filesystem::path path = oxts_dir_ / "data" / (ZeroPadded(raw_index, 10) + ".txt");
   std::ifstream file(path);
   if (!file.is_open()) {
     throw std::runtime_error("KittiOxtsReader: could not open oxts data file at " + path.string());
@@ -128,10 +122,7 @@ ImuMeasurement KittiOxtsReader::MeasurementAt(std::size_t index) const {
     throw std::runtime_error("KittiOxtsReader: oxts data file has too few fields: " + path.string());
   }
 
-  // Field order (0-indexed): lat,lon,alt,roll,pitch,yaw,vn,ve,vf,vl,vu,
-  // ax,ay,az,af,al,au,wx,wy,wz,wf,wl,wu,... -- see the class doc comment
-  // for why ax,ay,az/wx,wy,wz (indices 11-13, 17-19) are used and
-  // af,al,au/wf,wl,wu are not.
+  // Fields 11-13/17-19 are ax,ay,az/wx,wy,wz -- see the class doc comment.
   ImuMeasurement measurement;
   measurement.timestamp = timestamps_.at(index);
   measurement.linear_acceleration = Eigen::Vector3d(fields[11], fields[12], fields[13]);

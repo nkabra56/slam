@@ -9,9 +9,7 @@ namespace {
 
 constexpr double kPi = 3.14159265358979323846;
 
-// All points at z=0 share the same vertical angle (0 deg), so they all fall
-// into a single estimated ring regardless of the exact ring-bucket math --
-// avoids needing to hand-compute which of num_rings the points land in.
+// All points at z=0 share vertical angle 0, so they land in a single ring.
 LidarScan MakeSingleRingWithCorner(int n, double radius, int corner_index, double corner_radius) {
   LidarScan scan;
   for (int i = 0; i < n; ++i) {

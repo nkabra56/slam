@@ -5,9 +5,8 @@
 #include "slam/frontend_vio/vio_frontend.hpp"
 #include "slam/sensors/kitti_dataset.hpp"
 
-// Runs the Phase 1 stereo-VIO frontend over a KITTI sequence and prints the
-// raw (unoptimized) chained trajectory. IMU preintegration deltas are
-// computed but not yet fused into the pose -- see ROADMAP.md Phase 3.
+// Runs stereo VIO over a KITTI sequence and prints the raw chained
+// trajectory (IMU deltas computed but not fused).
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "Usage: slam_vio_demo <sequence_dir> [poses_file]\n";

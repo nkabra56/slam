@@ -8,12 +8,8 @@
 namespace slam::backend {
 namespace {
 
-// Builds a short synthetic trajectory with KNOWN gravity, per-keyframe
-// velocity, and gyro bias: generates ground-truth poses from the TRUE
-// (unbiased) IMU motion, and feeds InitializeVio only the BIASED
-// ("measured") preintegrations a real sensor would have produced --
-// mirroring exactly what a real bias-corrupted IMU vs. bias-free
-// ground-truth trajectory relationship looks like.
+// Ground-truth poses from TRUE (unbiased) IMU motion; InitializeVio only
+// sees the BIASED ("measured") preintegrations.
 TEST(InitializeVio, RecoversKnownGravityVelocityAndGyroBias) {
   const Eigen::Vector3d true_gravity(0.0, 0.0, -9.81);
   const Eigen::Vector3d true_gyro_bias(0.02, -0.01, 0.015);
@@ -33,8 +29,7 @@ TEST(InitializeVio, RecoversKnownGravityVelocityAndGyroBias) {
     const Eigen::Vector3d true_gyro(0.0, 0.0, 0.3);
     const Eigen::Vector3d true_accel(0.5, -0.2, 9.81 * 0.02);  // mild body-frame accel
 
-    // "Measured" (biased) preintegration -- the only thing InitializeVio
-    // ever sees.
+    // "Measured" (biased) preintegration -- the only thing InitializeVio sees.
     ImuPreintegration measured;
     ImuMeasurement m1;
     m1.timestamp = 0.0;
@@ -46,9 +41,7 @@ TEST(InitializeVio, RecoversKnownGravityVelocityAndGyroBias) {
     measured.Integrate(m2);
     preintegrations.push_back(measured);
 
-    // Ground truth from the TRUE (unbiased) motion, exactly satisfying
-    // the IMU kinematics with the known gravity -- same closed-form
-    // construction as imu_factor_test.cpp's SyntheticImuSegment.
+    // Ground truth from the TRUE (unbiased) motion.
     ImuPreintegration truth;
     ImuMeasurement t1 = m1;
     t1.angular_velocity = true_gyro;

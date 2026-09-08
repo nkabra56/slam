@@ -8,10 +8,8 @@
 namespace slam::backend {
 namespace {
 
-// Builds one keyframe transition's ground truth (pose_i -> pose_j, with
-// known velocity/gravity/gyro-bias satisfied exactly) and the BIASED raw
-// IMU samples a real sensor would report for it -- same construction
-// vio_initializer_test.cpp and nav_state_graph_test.cpp use.
+// Builds one keyframe transition's ground truth and the BIASED raw IMU
+// samples a real sensor would report for it.
 struct SyntheticStep {
   Sophus::SE3d pose_j;
   Eigen::Vector3d velocity_j;
@@ -122,12 +120,8 @@ TEST(TightlyCoupledOptimizer, InitializesFromSyntheticImuWindowAndRecoversVeloci
   EXPECT_NEAR((optimizer.StateOf(kWindow - 1).velocity - velocity).norm(), 0.0, 1e-1);
 }
 
-// Mirrors nav_state_graph_test.cpp's HighWeightPoseEdgeDominatesOverImuEdge
-// in spirit but inverted: once initialized, a confident IMU factor should
-// pull the fused estimate toward IMU-consistent motion when the pose edge
-// for that one transition is weak/degraded (e.g. a temporarily poor VIO/
-// LiDAR match) -- demonstrating tightly-coupled fusion does real work
-// after bootstrap, not just during it.
+// Once initialized, a confident IMU factor should pull the estimate toward
+// IMU-consistent motion when that transition's pose edge is weak.
 TEST(TightlyCoupledOptimizer, ImuFactorCorrectsAWeakPoseEdgeAfterInitialization) {
   const Eigen::Vector3d true_gravity(0.0, 0.0, -9.81);
   const Eigen::Vector3d true_gyro(0.0, 0.0, 0.0);
@@ -194,10 +188,7 @@ TEST(TightlyCoupledOptimizer, ImuFactorCorrectsAWeakPoseEdgeAfterInitialization)
 
   const NavNodeId last_id = optimizer.AddKeyframe(bad_vio_edge, no_edge);
 
-  // What the bad VIO edge alone (no IMU factor) would have pulled the pose
-  // toward: T_to = T_from * relative_pose (the pose-edge convention this
-  // class reuses verbatim from PoseGraphEdge -- see NavPoseEdge's doc
-  // comment in nav_state_graph.hpp).
+  // What the bad VIO edge alone (no IMU factor) would have pulled toward.
   const Eigen::Vector3d bad_edge_only_target = (pose * wrong_relative).translation();
 
   const double dist_to_imu_truth =

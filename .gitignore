@@ -1,0 +1,35 @@
+# Build artifacts
+build/
+out/
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# vcpkg
+vcpkg_installed/
+
+# IDE
+.vs/
+.vscode/
+*.user
+
+# Python
+__pycache__/
+*.pyc
+
+# Datasets (large; download locally per README.md)
+data/*
+!data/.gitkeep
+
+# ROS2 colcon workspace artifacts (ros2_ws/src/ is the only part tracked)
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Generated knowledge-graph / AI-assistant tooling output
+graphify-out/

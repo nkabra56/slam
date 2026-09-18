@@ -1,0 +1,23 @@
+services:
+  slam:
+    build:
+      context: .
+      target: runtime
+    image: slam:runtime
+    volumes:
+      - ./data:/data:ro
+    command: ["/bin/bash"]
+
+  # Starting point, not a complete sensor integration -- add --network host
+  # or volume/env config to point slam_node at a real bag/sensor source.
+  slam-ros2:
+    build:
+      context: .
+      target: ros2
+    image: slam:ros2
+    volumes:
+      - ./data:/data:ro
+    command: >
+      /bin/bash -c "source /opt/ros/humble/setup.bash &&
+      source /ros2_ws/install/setup.bash &&
+      ros2 launch slam_ros2 slam.launch.py"

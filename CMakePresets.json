@@ -1,0 +1,32 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "default",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_BUILD_TYPE": "Release",
+        "SLAM_BUILD_TESTS": "ON",
+        "SLAM_BUILD_APPS": "ON"
+      }
+    },
+    {
+      "name": "with-viz",
+      "inherits": "default",
+      "cacheVariables": {
+        "VCPKG_MANIFEST_FEATURES": "viz",
+        "SLAM_BUILD_VIZ": "ON"
+      }
+    },
+    {
+      "name": "with-cuda",
+      "inherits": "default",
+      "cacheVariables": {
+        "VCPKG_MANIFEST_FEATURES": "cuda",
+        "SLAM_USE_CUDA_OPTFLOW": "ON"
+      }
+    }
+  ]
+}

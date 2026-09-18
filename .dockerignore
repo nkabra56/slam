@@ -1,0 +1,17 @@
+build/
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+vcpkg_installed/
+
+data/
+
+.git/
+.vs/
+.vscode/
+*.pdb
+*.obj
+*.o
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json

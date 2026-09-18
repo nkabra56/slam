@@ -21,6 +21,9 @@ struct ScanMatcherParams {
   double convergence_threshold = 1e-8;  // squared-norm of the update step
   double max_edge_correspondence_dist = 1.0;    // meters
   double max_planar_correspondence_dist = 1.0;  // meters
+  // damping_ratio * num_residuals is added to H's diagonal each iteration --
+  // scales with the problem so it suppresses degenerate directions consistently.
+  double damping_ratio = 0.05;
 };
 
 // LOAM-style point-to-line/point-to-plane Gauss-Newton scan matching over

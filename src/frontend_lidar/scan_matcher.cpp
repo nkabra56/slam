@@ -113,7 +113,7 @@ std::optional<ScanMatchResult> MatchScans(const ScanFeatures& source, const Scan
     }
 
     Eigen::Matrix<double, 6, 6> H = J.transpose() * J;
-    H.diagonal().array() += 1e-6;  // small fixed damping for numerical stability
+    H.diagonal().array() += params.damping_ratio * num_residuals;
     const Eigen::Matrix<double, 6, 1> b = -J.transpose() * r;
     const Eigen::Matrix<double, 6, 1> delta = H.ldlt().solve(b);
 

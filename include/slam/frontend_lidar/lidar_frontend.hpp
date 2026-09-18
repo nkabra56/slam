@@ -32,6 +32,8 @@ class LidarFrontend {
   ScanMatcherParams matcher_params_;
   ScanFeatures previous_features_;
   bool has_previous_scan_{false};
+  // Constant-velocity seed for MatchScans's initial guess.
+  Sophus::SE3d last_relative_pose_;
 };
 
 }  // namespace slam::frontend_lidar

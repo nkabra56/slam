@@ -25,13 +25,16 @@ LidarFrontend::FrameResult LidarFrontend::ProcessScan(const LidarScan& scan) {
   ScanFeatures features = Downsample(ExtractFeatures(scan, feature_params_));
 
   if (has_previous_scan_) {
-    // source=previous, target=current, matching VioFrontend's convention.
+    // source=previous, target=current. Seed with the last frame's motion --
+    // identity fails once per-frame motion exceeds MatchScans's correspondence
+    // search radius, which highway-speed sequences do on every frame.
     if (const auto match =
-            MatchScans(previous_features_, features, Sophus::SE3d(), matcher_params_)) {
+            MatchScans(previous_features_, features, last_relative_pose_, matcher_params_)) {
       result.relative_pose = match->pose;
       result.num_edge_correspondences = match->num_edge_correspondences;
       result.num_planar_correspondences = match->num_planar_correspondences;
       result.has_pose = true;
+      last_relative_pose_ = match->pose;
     }
   }
 

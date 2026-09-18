@@ -65,11 +65,14 @@ std::optional<ScanMatchResult> MatchScans(const ScanFeatures& source, const Scan
 
       const Eigen::Matrix3d projector = Eigen::Matrix3d::Identity() - u * u.transpose();
       const Eigen::Vector3d e = projector * (p_target - a);
+      const double distance_ratio = e.norm() / params.edge_robust_cutoff;
+      if (distance_ratio >= 1.0) continue;
+      const double row_scale = 1.0 - distance_ratio * distance_ratio;  // sqrt of the Tukey weight
       const Eigen::Matrix<double, 3, 6> de_dxi = projector * PointJacobian(R, p_source);
 
       for (int row = 0; row < 3; ++row) {
-        jacobian_rows.push_back(de_dxi.row(row));
-        residual_rows.push_back(e(row));
+        jacobian_rows.push_back(row_scale * de_dxi.row(row));
+        residual_rows.push_back(row_scale * e(row));
       }
       ++num_edge;
     }

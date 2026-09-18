@@ -62,6 +62,27 @@ TEST(MatchScans, RecoversKnownSmallRigidTransform) {
   EXPECT_GT(match->num_edge_correspondences, 10);
 }
 
+// Edge picks are sparse, so many land far from any true line; those must not
+// drag the pose. Identity is the truth; the extra source edges sit 0.6m off a line.
+TEST(MatchScans, IgnoresEdgeMatchesBeyondTheRobustCutoff) {
+  ScanFeatures target;
+  target.planar_points = MakeJitteredPlane(12, 12, 0.6);
+  target.edge_points = MakeTwoOrthogonalLines();
+
+  ScanFeatures source = target;
+  for (double z = 0.2; z <= 3.0; z += 0.2) source.edge_points.emplace_back(3.6, 3.0, z);
+
+  const auto robust = MatchScans(source, target);
+  ASSERT_TRUE(robust.has_value());
+  EXPECT_LT(robust->pose.log().norm(), 5e-3);
+
+  ScanMatcherParams no_cutoff;
+  no_cutoff.edge_robust_cutoff = 1e9;
+  const auto naive = MatchScans(source, target, Sophus::SE3d(), no_cutoff);
+  ASSERT_TRUE(naive.has_value());
+  EXPECT_GT(naive->pose.log().norm(), 5e-2);
+}
+
 // Matching in another coordinate frame (both scans moved by E) must give the
 // conjugated relative pose E*T*E^-1 -- why LidarFrontend can apply its
 // LiDAR-to-camera extrinsic to features before matching.

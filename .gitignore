@@ -31,5 +31,6 @@ ros2_ws/build/
 ros2_ws/install/
 ros2_ws/log/
 
-# Generated knowledge-graph / AI-assistant tooling output
+# AI-assistant tooling: generated knowledge graph and local config
 graphify-out/
+.claude/

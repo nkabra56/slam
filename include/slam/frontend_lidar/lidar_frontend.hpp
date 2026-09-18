@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Eigen/Geometry>
 #include <sophus/se3.hpp>
 
 #include "slam/common/types.hpp"
@@ -19,8 +20,12 @@ class LidarFrontend {
     int num_planar_correspondences{0};
   };
 
+  // `lidar_to_camera` moves extracted features into the camera frame that
+  // VIO and ground truth use, so poses and LastFeatures() are in that frame.
+  // Identity leaves everything in the LiDAR's own frame.
   explicit LidarFrontend(FeatureExtractionParams feature_params = {},
-                          ScanMatcherParams matcher_params = {});
+                          ScanMatcherParams matcher_params = {},
+                          Eigen::Isometry3d lidar_to_camera = Eigen::Isometry3d::Identity());
 
   FrameResult ProcessScan(const LidarScan& scan);
 
@@ -30,6 +35,7 @@ class LidarFrontend {
  private:
   FeatureExtractionParams feature_params_;
   ScanMatcherParams matcher_params_;
+  Eigen::Isometry3d lidar_to_camera_;
   ScanFeatures previous_features_;
   bool has_previous_scan_{false};
   // Constant-velocity seed for MatchScans's initial guess.

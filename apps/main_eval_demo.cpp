@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     }
 
     slam::frontend_vio::VioFrontend vio(calibration);
-    slam::frontend_lidar::LidarFrontend lidar;
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
     slam::backend::SlidingWindowOptimizer optimizer;
 
     std::optional<slam::sensors::KittiOxtsReader> oxts_reader;

@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
 
   try {
     const slam::sensors::KittiSequenceReader reader(sequence_dir, poses_file);
-    slam::frontend_lidar::LidarFrontend lidar;
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
 
     Sophus::SE3d world_pose;  // identity at frame 0
 

@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     }
 
     slam::frontend_vio::VioFrontend vio(calibration);
-    slam::frontend_lidar::LidarFrontend lidar;
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
     slam::backend::SlidingWindowOptimizer optimizer;
 
     for (std::size_t i = 0; i < reader.NumFrames(); ++i) {

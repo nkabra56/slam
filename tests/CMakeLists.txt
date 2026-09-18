@@ -10,6 +10,7 @@ add_executable(slam_tests
   frontend_lidar/kdtree_test.cpp
   frontend_lidar/scan_features_test.cpp
   frontend_lidar/scan_matcher_test.cpp
+  frontend_lidar/lidar_frontend_test.cpp
   backend/pose_graph_test.cpp
   backend/loop_closure_test.cpp
   backend/optimizer_test.cpp

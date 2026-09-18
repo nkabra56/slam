@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     const slam::StereoCalibration calibration = reader.LoadCalibration();
 
     slam::frontend_vio::VioFrontend vio(calibration);
-    slam::frontend_lidar::LidarFrontend lidar;
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
     slam::backend::SlidingWindowOptimizer optimizer;
 
     std::vector<std::vector<Eigen::Vector3d>> landmarks_per_frame;

@@ -62,6 +62,41 @@ TEST(MatchScans, RecoversKnownSmallRigidTransform) {
   EXPECT_GT(match->num_edge_correspondences, 10);
 }
 
+// Matching in another coordinate frame (both scans moved by E) must give the
+// conjugated relative pose E*T*E^-1 -- why LidarFrontend can apply its
+// LiDAR-to-camera extrinsic to features before matching.
+TEST(MatchScans, IsEquivariantUnderACommonChangeOfFrame) {
+  ScanFeatures target;
+  target.planar_points = MakeJitteredPlane(12, 12, 0.6);
+  target.edge_points = MakeTwoOrthogonalLines();
+
+  const Sophus::SE3d ground_truth(
+      Eigen::Quaterniond(Eigen::AngleAxisd(0.05, Eigen::Vector3d(0.3, 0.6, 0.7).normalized())),
+      Eigen::Vector3d(0.15, -0.1, 0.05));
+  const Sophus::SE3d frame_change(
+      Eigen::Quaterniond(Eigen::AngleAxisd(1.2, Eigen::Vector3d(1.0, 2.0, 3.0).normalized())),
+      Eigen::Vector3d(0.1, -0.3, 0.7));
+
+  ScanFeatures source;
+  for (const auto& p : target.planar_points) source.planar_points.push_back(ground_truth.inverse() * p);
+  for (const auto& p : target.edge_points) source.edge_points.push_back(ground_truth.inverse() * p);
+
+  ScanFeatures moved_source;
+  ScanFeatures moved_target;
+  for (const auto& p : source.planar_points) moved_source.planar_points.push_back(frame_change * p);
+  for (const auto& p : source.edge_points) moved_source.edge_points.push_back(frame_change * p);
+  for (const auto& p : target.planar_points) moved_target.planar_points.push_back(frame_change * p);
+  for (const auto& p : target.edge_points) moved_target.edge_points.push_back(frame_change * p);
+
+  const auto original = MatchScans(source, target);
+  const auto moved = MatchScans(moved_source, moved_target);
+  ASSERT_TRUE(original.has_value());
+  ASSERT_TRUE(moved.has_value());
+
+  const Sophus::SE3d expected = frame_change * original->pose * frame_change.inverse();
+  EXPECT_LT((expected.inverse() * moved->pose).log().norm(), 1e-2);
+}
+
 // Real per-frame motion at highway speed (~1.5m/0.1s) exceeds the 1m default
 // correspondence radius. An identity guess should fail to recover it, while a
 // constant-velocity-style guess near the truth should -- this is why

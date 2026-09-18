@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
     std::cout << "Loaded IMU from " << oxts_dir << " (start_frame=" << mapping->start_frame << ")\n";
 
     slam::frontend_vio::VioFrontend vio(calibration);
-    slam::frontend_lidar::LidarFrontend lidar;
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
     slam::backend::TightlyCoupledOptimizer optimizer;
 
     bool announced_init = false;

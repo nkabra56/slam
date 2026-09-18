@@ -97,6 +97,25 @@ TEST_F(KittiSequenceReaderTest, LoadsCalibration) {
   EXPECT_DOUBLE_EQ(calib.baseline_m, 0.5);
 }
 
+TEST_F(KittiSequenceReaderTest, LoadsLidarToCameraFromTrLine) {
+  {
+    std::ofstream calib(sequence_dir_ / "calib.txt", std::ios::app);
+    // cam = (-vel_y, -vel_z, vel_x) + (0.1, 0.2, 0.3)
+    calib << "Tr: 0 -1 0 0.1 0 0 -1 0.2 1 0 0 0.3\n";
+  }
+
+  KittiSequenceReader reader(sequence_dir_);
+  const Eigen::Vector3d p_camera = reader.LoadLidarToCamera() * Eigen::Vector3d(1.0, 2.0, 3.0);
+  EXPECT_NEAR(p_camera.x(), -1.9, 1e-12);
+  EXPECT_NEAR(p_camera.y(), -2.8, 1e-12);
+  EXPECT_NEAR(p_camera.z(), 1.3, 1e-12);
+}
+
+TEST_F(KittiSequenceReaderTest, ThrowsWhenTrLineIsMissing) {
+  KittiSequenceReader reader(sequence_dir_);
+  EXPECT_THROW(reader.LoadLidarToCamera(), std::runtime_error);
+}
+
 TEST_F(KittiSequenceReaderTest, ThrowsOnMissingDirectory) {
   EXPECT_THROW(KittiSequenceReader(sequence_dir_ / "does_not_exist"), std::runtime_error);
 }

@@ -32,6 +32,11 @@ class KittiSequenceReader {
   // grayscale pair used by LoadImage(index, 0)/LoadImage(index, 1).
   StereoCalibration LoadCalibration() const;
 
+  // Reads calib.txt's `Tr:` line: Velodyne points -> camera 0 (the frame the
+  // ground-truth poses are in). Throws if absent -- the gray-images archive's
+  // calib.txt has only P0-P3; `Tr` is in the separate data_odometry_calib.zip.
+  Eigen::Isometry3d LoadLidarToCamera() const;
+
  private:
   std::filesystem::path sequence_dir_;
   std::vector<TimestampSec> timestamps_;

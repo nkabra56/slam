@@ -109,6 +109,41 @@ StereoCalibration ReadCalibration(const std::filesystem::path& path) {
   return calibration;
 }
 
+Eigen::Isometry3d ReadLidarToCamera(const std::filesystem::path& path) {
+  std::ifstream file(path);
+  if (!file.is_open()) {
+    throw std::runtime_error("KittiSequenceReader: could not open calib.txt at " + path.string());
+  }
+
+  std::string line;
+  while (std::getline(file, line)) {
+    std::istringstream iss(line);
+    std::string label;
+    iss >> label;
+    if (label != "Tr:") {
+      continue;
+    }
+
+    Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
+    for (int row = 0; row < 3; ++row) {
+      for (int col = 0; col < 4; ++col) {
+        iss >> mat(row, col);
+      }
+    }
+    if (!iss) {
+      throw std::runtime_error("KittiSequenceReader: malformed Tr line in " + path.string());
+    }
+    Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
+    transform.matrix() = mat;
+    return transform;
+  }
+
+  throw std::runtime_error(
+      "KittiSequenceReader: no Tr line (Velodyne-to-camera extrinsic) in " + path.string() +
+      ". The gray-images archive's calib.txt has only P0-P3; replace it with the one from KITTI's "
+      "separate data_odometry_calib.zip.");
+}
+
 }  // namespace
 
 KittiSequenceReader::KittiSequenceReader(const std::filesystem::path& sequence_dir,
@@ -184,6 +219,10 @@ Eigen::Isometry3d KittiSequenceReader::GroundTruthPoseAt(std::size_t index) cons
 
 StereoCalibration KittiSequenceReader::LoadCalibration() const {
   return ReadCalibration(sequence_dir_ / "calib.txt");
+}
+
+Eigen::Isometry3d KittiSequenceReader::LoadLidarToCamera() const {
+  return ReadLidarToCamera(sequence_dir_ / "calib.txt");
 }
 
 }  // namespace slam::sensors

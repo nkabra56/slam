@@ -4,18 +4,29 @@ project(slam LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Default single-config generators to Release -- otherwise this dense
+# Eigen/Sophus math silently compiles at -O0.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+endif()
+
 option(SLAM_BUILD_TESTS "Build unit tests" ON)
 option(SLAM_BUILD_APPS "Build command-line apps" ON)
 option(SLAM_BUILD_PYTHON_BINDINGS "Build pybind11 Python bindings" OFF)
-# Off by default: pulls in OpenGL/X11 dependencies nothing else needs, and
-# requires the vcpkg manifest's "viz" feature (not installed by default --
-# see vcpkg.json and README.md). See slam::viz::PangolinViewer's doc
-# comment for why this is opt-in rather than part of the default build.
+# Off by default: pulls in OpenGL/X11 deps + the vcpkg "viz" feature.
+# See slam::viz::PangolinViewer's doc comment for why it's opt-in.
 option(SLAM_BUILD_VIZ "Build the Pangolin live viewer" OFF)
+# Off by default: requires the vcpkg "cuda" feature and a local NVIDIA
+# CUDA Toolkit install -- see vcpkg.json and the with-cuda preset.
+option(SLAM_USE_CUDA_OPTFLOW "Use OpenCV CUDA KLT tracking in the VIO frontend" OFF)
 
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(Sophus CONFIG REQUIRED)
 find_package(OpenCV REQUIRED)
+
+if(SLAM_USE_CUDA_OPTFLOW AND NOT OpenCV_CUDA_VERSION)
+  message(FATAL_ERROR "SLAM_USE_CUDA_OPTFLOW requires an OpenCV build with CUDA (use the with-cuda preset)")
+endif()
 
 add_subdirectory(src)
 
@@ -39,11 +50,8 @@ if(SLAM_BUILD_PYTHON_BINDINGS)
   add_subdirectory(bindings)
 endif()
 
-# --- Install / export: lets external CMake projects (e.g. ros2_ws/'s
-# ament_cmake overlay, PHASE6_PLAN.md section 3.6) consume slam_core via a
-# plain `find_package(slam CONFIG REQUIRED)`, without slam_core itself
-# knowing anything about ROS2. Useful independent of ROS2 too -- anyone
-# linking this library from another CMake project needs it.
+# Install/export so external CMake projects (e.g. ros2_ws's ament_cmake
+# overlay, PHASE6_PLAN.md section 3.6) can find_package(slam CONFIG REQUIRED).
 include(GNUInstallDirs)
 
 install(TARGETS slam_core

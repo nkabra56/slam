@@ -1,9 +1,51 @@
 #include "slam/frontend_vio/feature_tracker.hpp"
 
 #include <opencv2/imgproc.hpp>
+
+#ifdef SLAM_USE_CUDA_OPTFLOW
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/cudaoptflow.hpp>
+#else
 #include <opencv2/video/tracking.hpp>
+#endif
 
 namespace slam::frontend_vio {
+
+namespace {
+
+// Pyramidal KLT: GPU (OpenCV cudaoptflow) when built with SLAM_USE_CUDA_OPTFLOW,
+// CPU otherwise. Same next_points/status contract as cv::calcOpticalFlowPyrLK.
+void TrackPoints(const cv::Mat& prev_image, const cv::Mat& image,
+                  const std::vector<cv::Point2f>& prev_points,
+                  std::vector<cv::Point2f>& next_points, std::vector<uchar>& status) {
+#ifdef SLAM_USE_CUDA_OPTFLOW
+  cv::cuda::GpuMat d_prev, d_curr;
+  d_prev.upload(prev_image);
+  d_curr.upload(image);
+
+  cv::Mat prev_pts_mat(1, static_cast<int>(prev_points.size()), CV_32FC2,
+                        const_cast<cv::Point2f*>(prev_points.data()));
+  cv::cuda::GpuMat d_prev_pts;
+  d_prev_pts.upload(prev_pts_mat);
+
+  cv::cuda::GpuMat d_next_pts, d_status;
+  static const auto klt = cv::cuda::SparsePyrLKOpticalFlow::create();
+  klt->calc(d_prev, d_curr, d_prev_pts, d_next_pts, d_status);
+
+  cv::Mat next_pts_mat, status_mat;
+  d_next_pts.download(next_pts_mat);
+  d_status.download(status_mat);
+
+  next_points.assign(next_pts_mat.ptr<cv::Point2f>(),
+                      next_pts_mat.ptr<cv::Point2f>() + prev_points.size());
+  status.assign(status_mat.ptr<uchar>(), status_mat.ptr<uchar>() + prev_points.size());
+#else
+  std::vector<float> error;
+  cv::calcOpticalFlowPyrLK(prev_image, image, prev_points, next_points, status, error);
+#endif
+}
+
+}  // namespace
 
 FeatureTracker::FeatureTracker(Params params) : params_(params) {}
 
@@ -43,8 +85,7 @@ const std::vector<TrackedFeature>& FeatureTracker::Track(const cv::Mat& image) {
 
   std::vector<cv::Point2f> next_points;
   std::vector<uchar> status;
-  std::vector<float> error;
-  cv::calcOpticalFlowPyrLK(prev_image_, image, prev_points, next_points, status, error);
+  TrackPoints(prev_image_, image, prev_points, next_points, status);
 
   std::vector<TrackedFeature> survivors;
   survivors.reserve(tracks_.size());

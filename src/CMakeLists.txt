@@ -36,3 +36,7 @@ target_link_libraries(slam_core PUBLIC
 )
 
 target_compile_features(slam_core PUBLIC cxx_std_17)
+
+if(SLAM_USE_CUDA_OPTFLOW)
+  target_compile_definitions(slam_core PUBLIC SLAM_USE_CUDA_OPTFLOW)
+endif()

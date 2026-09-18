@@ -169,6 +169,15 @@ cmake --build build
 ./build/apps/slam_viz_demo data/sequences/00 data/poses/00.txt
 ```
 
+CUDA-accelerated KLT tracking in the VIO frontend is likewise opt-in — build
+with the `with-cuda` preset (requires the NVIDIA CUDA Toolkit installed
+locally; native Windows/Linux builds only, not the Docker images):
+
+```powershell
+cmake --preset with-cuda
+cmake --build build
+```
+
 ## Evaluation
 
 `slam_eval_demo` runs all four trajectory variants (VIO-only, LiDAR-only,
@@ -267,7 +276,7 @@ coordinate-frame convention behind that check.
 
 ## Status
 
-Phases 0-5 are complete: build/CI setup, core data types, a KITTI sequence
+Phases 0-5 are complete: build setup, core data types, a KITTI sequence
 reader (images/LiDAR/calibration/ground truth), a stereo visual-inertial
 frontend (KLT tracking, stereo triangulation, PnP relative pose, IMU
 preintegration wired to real KITTI IMU data), a LiDAR frontend (LOAM-style

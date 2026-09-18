@@ -15,8 +15,17 @@
   ],
   "features": {
     "viz": {
-      "description": "Pangolin live trajectory/map viewer (SLAM_BUILD_VIZ). Requires OpenGL/X11 dev libraries on Linux, e.g. libgl1-mesa-dev + X11 headers -- not installed by CI, opt in locally with --x-feature=viz.",
+      "description": "Pangolin live trajectory/map viewer (SLAM_BUILD_VIZ). Requires OpenGL/X11 dev libraries on Linux, e.g. libgl1-mesa-dev + X11 headers -- not installed by default, opt in with --x-feature=viz.",
       "dependencies": ["pangolin"]
+    },
+    "cuda": {
+      "description": "CUDA-accelerated optical flow via OpenCV's cudaoptflow module (SLAM_USE_CUDA_OPTFLOW). Requires the NVIDIA CUDA Toolkit installed locally -- vcpkg does not install it. Windows x64 native builds only; use the with-cuda preset.",
+      "dependencies": [
+        {
+          "name": "opencv4",
+          "features": ["cuda"]
+        }
+      ]
     }
   }
 }

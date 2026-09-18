@@ -36,6 +36,7 @@ TEST(Map, ExportPlyWritesValidHeaderAndVertexCount) {
   std::getline(file, line);
   EXPECT_EQ(line, "element vertex 2");
 
+  file.close();
   std::filesystem::remove(path);
 }
 

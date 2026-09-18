@@ -16,7 +16,7 @@ the full test suite as part of the image build — a successful build is
 the source of truth for whether the project compiles and passes tests.
 
 ## Phase 0 — Scaffolding
-- [x] Repo structure, CMake + vcpkg manifest, CI (GitHub Actions, Linux + Windows)
+- [x] Repo structure, CMake + vcpkg manifest
 - [x] `slam::common` data types (`ImageFrame`, `ImuMeasurement`, `LidarScan`)
 - [x] KITTI odometry sequence reader (images, Velodyne scans, ground-truth poses) + unit tests
 - [ ] Download a KITTI odometry sequence locally and run `slam_kitti_demo` against it
@@ -134,7 +134,7 @@ which is derivable and testable by hand. It follows the standard Pangolin
 usage pattern (the same structure ORB-SLAM2's viewer uses). Build and run
 it to confirm it renders correctly before relying on it. It's gated
 behind `SLAM_BUILD_VIZ` (default off) and the vcpkg `viz` feature
-specifically so it never affects the default build or CI.
+specifically so it never affects the default build.
 `slam_mapping_demo`'s PLY export has no such caveat — plain, testable
 file I/O with unit test coverage.
 

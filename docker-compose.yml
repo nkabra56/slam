@@ -8,10 +8,8 @@ services:
       - ./data:/data:ro
     command: ["/bin/bash"]
 
-  # Runs slam_node against real ROS2 topics/a bag. Point it at your
-  # sensor/bag source with --network host or additional volume/env config
-  # as needed -- this compose service is a starting point, not a complete
-  # sensor integration (see README.md's "Running on ROS2" section).
+  # Starting point, not a complete sensor integration -- add --network host
+  # or volume/env config to point slam_node at a real bag/sensor source.
   slam-ros2:
     build:
       context: .

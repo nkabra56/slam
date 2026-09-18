@@ -1,15 +1,7 @@
-# Multi-stage build for the slam project.
-#
-#   docker build --target runtime -t slam:runtime .   (default target)
-#   docker build --target ros2    -t slam:ros2 .      (adds the ROS2 overlay)
-#
-# The `deps` stage builds slam_core + apps and runs the full test suite
-# (`ctest`) as part of the image build -- `docker build` fails if any test
-# fails.
+# Multi-stage build: deps (build+test) -> runtime (slim demo image) ->
+# ros2 (ROS2 overlay). See README.md for docker build/run commands.
 
-# ---------------------------------------------------------------------------
-# Stage: deps -- builds slam_core + apps and runs the test suite.
-# ---------------------------------------------------------------------------
+# deps: builds slam_core + apps, runs the full test suite via ctest.
 FROM ubuntu:22.04 AS deps
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -40,9 +32,8 @@ RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}" \
 
 WORKDIR /workspace
 
-# Install dependencies before copying the rest of the source, so this slow
-# layer (OpenCV et al. built from source by vcpkg -- can take a while) is
-# cached independently of ordinary source-code changes.
+# Install deps before copying the rest of the source, so this slow
+# vcpkg-builds-OpenCV-from-source layer is cached independently of it.
 COPY vcpkg.json ./
 RUN "${VCPKG_ROOT}/vcpkg" install --triplet x64-linux
 
@@ -54,10 +45,7 @@ RUN cmake --preset default \
 
 RUN cmake --install build --prefix /opt/slam
 
-# ---------------------------------------------------------------------------
-# Stage: runtime -- slim image with the built demo apps, for running
-# against a mounted KITTI dataset (see README.md). Default build target.
-# ---------------------------------------------------------------------------
+# runtime: slim image with the built demo apps (default target).
 FROM ubuntu:22.04 AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -74,11 +62,8 @@ WORKDIR /data
 
 CMD ["/bin/bash"]
 
-# ---------------------------------------------------------------------------
-# Stage: ros2 -- the ROS2 overlay (ros2_ws/src/slam_ros2), built against the
-# `deps` stage's installed slam_core via find_package(slam CONFIG REQUIRED)
-# (see PHASE6_PLAN.md section 3.6).
-# ---------------------------------------------------------------------------
+# ros2: ROS2 overlay (ros2_ws/src/slam_ros2) built against deps' installed
+# slam_core via find_package(slam CONFIG REQUIRED).
 FROM ros:humble-ros-base AS ros2
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -90,11 +75,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=deps /opt/slam /opt/slam
-# slamConfig.cmake's find_dependency(Eigen3/Sophus/OpenCV) needs these
-# findable too; `cmake --install` only exports slam_core itself, so copy
-# vcpkg's installed tree to keep slam_core linked against the exact OpenCV
-# build it was compiled against, not apt's (e.g. cv_bridge's below --
-# a cv::Mat crossing that boundary still spans two OpenCV builds).
+# slamConfig.cmake's find_dependency() needs Eigen3/Sophus/OpenCV findable;
+# copy vcpkg's tree so cv_bridge and slam_core share one OpenCV build.
 COPY --from=deps /workspace/vcpkg_installed/x64-linux /opt/vcpkg_installed/x64-linux
 
 WORKDIR /ros2_ws

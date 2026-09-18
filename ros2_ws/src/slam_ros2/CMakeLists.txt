@@ -16,11 +16,8 @@ find_package(tf2_ros REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(message_filters REQUIRED)
 
-# slam_core from the main (non-ROS) build: a plain CMake package, not an
-# ament one. Requires CMAKE_PREFIX_PATH to include wherever
-# `cmake --install` put it (see PHASE6_PLAN.md section 3.6 and this repo's
-# root README.md's ROS2 section) -- e.g.:
-#   colcon build --cmake-args -DCMAKE_PREFIX_PATH=/path/to/slam/install
+# Plain CMake package, not ament -- CMAKE_PREFIX_PATH must include wherever
+# `cmake --install` put it (see root README.md's ROS2 section).
 find_package(slam CONFIG REQUIRED)
 
 add_library(slam_ros2_lib

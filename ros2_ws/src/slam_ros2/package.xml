@@ -5,10 +5,8 @@
   <version>0.1.0</version>
   <description>
     ROS2 wrapper for the slam project's VIO/LiDAR/backend/mapping pipeline.
-    Depends on slam_core (this repo's main library) via a plain
-    find_package(slam CONFIG REQUIRED), not rosdep -- see PHASE6_PLAN.md
-    section 3.6 and README.md's ROS2 section for how to make it
-    discoverable (CMAKE_PREFIX_PATH after `cmake --install`).
+    Depends on slam_core via find_package(CONFIG), not rosdep -- see root
+    README.md's ROS2 section for how to make it discoverable.
   </description>
   <maintainer email="nkabra56@gmail.com">Nishant Kabra</maintainer>
   <license>MIT</license>

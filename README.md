@@ -33,8 +33,8 @@ free for research/non-commercial use, and the only common dataset with
 synchronized stereo camera + Velodyne LiDAR + ground-truth poses in the same
 sequences, so both front-ends develop and evaluate against one dataset.
 
-Download the *grayscale*, *velodyne laser data*, and *ground truth poses*
-downloads from the KITTI site, then lay them out as:
+Download the *grayscale*, *velodyne laser data*, *calibration files*, and
+*ground truth poses* downloads from the KITTI site, then lay them out as:
 
 ```
 data/
@@ -43,12 +43,17 @@ data/
       image_0/
       image_1/
       velodyne/
+      calib.txt
       times.txt
     ...
   poses/
     00.txt
     ...
 ```
+
+`calib.txt` must come from the calibration download: the grayscale archive's
+copy has only `P0`-`P3`, while LiDAR needs the `Tr` line (Velodyne-to-camera
+extrinsic). Without it the LiDAR demos refuse to run.
 
 `data/` is gitignored — nothing under it is committed to the repo.
 

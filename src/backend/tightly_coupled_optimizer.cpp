@@ -126,7 +126,7 @@ NavNodeId TightlyCoupledOptimizer::AddKeyframe(const EdgeMeasurement& vio_edge,
       NavPoseEdge edge;
       edge.from = prev_id;
       edge.to = new_id;
-      edge.measurement = vio_edge.relative_pose.inverse();
+      edge.measurement = vio_edge.relative_pose;
       edge.information = WeightedPoseInformation(params_.vio_weight, vio_edge.num_matches);
       graph_.AddPoseEdge(edge);
     }
@@ -134,7 +134,7 @@ NavNodeId TightlyCoupledOptimizer::AddKeyframe(const EdgeMeasurement& vio_edge,
       NavPoseEdge edge;
       edge.from = prev_id;
       edge.to = new_id;
-      edge.measurement = lidar_edge.relative_pose.inverse();
+      edge.measurement = lidar_edge.relative_pose;
       edge.information = WeightedPoseInformation(params_.lidar_weight, lidar_edge.num_matches);
       graph_.AddPoseEdge(edge);
     }
@@ -161,8 +161,7 @@ NavNodeId TightlyCoupledOptimizer::AddKeyframe(const EdgeMeasurement& vio_edge,
   keyframes_.push_back(KeyframeRecord{graph_.State(new_id).pose.translation(), lidar_features});
   TryDetectLoopClosure(new_id, lidar_features);
 
-  // Solve before TryInitialize() reads window poses, or the just-added node
-  // still holds its raw (rotation-wrong) seed guess.
+  // Solve first so TryInitialize() reads fused window poses, not the raw seed.
   FreezeOutsideWindow();
   graph_.Solve();
 

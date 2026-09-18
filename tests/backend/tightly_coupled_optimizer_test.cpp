@@ -51,10 +51,11 @@ TEST(TightlyCoupledOptimizer, BeforeInitializationBehavesAsPoseOnlyGraph) {
   params.init_window_keyframes = 10;  // never reached in this test
   TightlyCoupledOptimizer optimizer(params);
 
+  // Camera moves by `step`; frontends report p_new = relative_pose * p_prev, its inverse.
   const Sophus::SE3d step(Eigen::Quaterniond::Identity(), Eigen::Vector3d(1.0, 0.0, 0.0));
   TightlyCoupledOptimizer::EdgeMeasurement vio_edge;
   vio_edge.valid = true;
-  vio_edge.relative_pose = step;
+  vio_edge.relative_pose = step.inverse();
   vio_edge.num_matches = 50;
   TightlyCoupledOptimizer::EdgeMeasurement no_edge;
 
@@ -69,6 +70,46 @@ TEST(TightlyCoupledOptimizer, BeforeInitializationBehavesAsPoseOnlyGraph) {
   EXPECT_NEAR(final_position.x(), 5.0, 1e-6);
   // No IMU factor yet -- velocity should stay at its zero seed.
   EXPECT_NEAR(optimizer.StateOf(5).velocity.norm(), 0.0, 1e-9);
+}
+
+// Distinct rotating steps: identical steps commute and would hide composition-order errors.
+std::vector<Sophus::SE3d> MakeCameraMotions() {
+  std::vector<Sophus::SE3d> motions;
+  for (int i = 0; i < 6; ++i) {
+    const double yaw = 0.05 * (i + 1) * (i % 2 == 0 ? 1.0 : -1.0);
+    motions.emplace_back(Eigen::Quaterniond(Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitY())),
+                         Eigen::Vector3d(0.03 * i, 0.01 * i, 1.0 + 0.1 * i));
+  }
+  return motions;
+}
+
+// VIO and LiDAR edges take separate code paths; each alone, and both together,
+// must reproduce the demos' composition T_new = T_prev * relative_pose.inverse().
+TEST(TightlyCoupledOptimizer, VioAndLidarEdgesChainLikeTheDemosComposition) {
+  struct Config {
+    bool vio;
+    bool lidar;
+  };
+  for (const Config config : {Config{true, false}, Config{false, true}, Config{true, true}}) {
+    SCOPED_TRACE(::testing::Message() << "vio=" << config.vio << " lidar=" << config.lidar);
+    TightlyCoupledOptimizer::Params params;
+    params.init_window_keyframes = 100;  // never reached: pure pose graph
+    TightlyCoupledOptimizer optimizer(params);
+    TightlyCoupledOptimizer::EdgeMeasurement no_edge;
+    optimizer.AddKeyframe(no_edge, no_edge);
+
+    Sophus::SE3d expected;
+    for (const Sophus::SE3d& camera_motion : MakeCameraMotions()) {
+      TightlyCoupledOptimizer::EdgeMeasurement edge;
+      edge.valid = true;
+      edge.relative_pose = camera_motion.inverse();
+      edge.num_matches = 100;
+      const NavNodeId id = optimizer.AddKeyframe(config.vio ? edge : no_edge, config.lidar ? edge : no_edge);
+      expected = expected * edge.relative_pose.inverse();
+      EXPECT_LT((optimizer.StateOf(id).pose.inverse() * expected).log().norm(), 1e-6)
+          << "keyframe " << id;
+    }
+  }
 }
 
 TEST(TightlyCoupledOptimizer, InitializesFromSyntheticImuWindowAndRecoversVelocityAndGravity) {
@@ -103,11 +144,11 @@ TEST(TightlyCoupledOptimizer, InitializesFromSyntheticImuWindowAndRecoversVeloci
     m2.timestamp = i * dt + dt;
     optimizer.AddImuMeasurement(m2);
 
-    // Noiseless VIO edge exactly matching the ground-truth relative pose,
-    // so pose-chain seeding matches truth precisely.
+    // Noiseless VIO edge for the true motion, in the frontends' convention
+    // (the inverse of pose_i^-1 * pose_j), so seeding matches truth precisely.
     TightlyCoupledOptimizer::EdgeMeasurement vio_edge;
     vio_edge.valid = true;
-    vio_edge.relative_pose = pose.inverse() * synthetic_step.pose_j;
+    vio_edge.relative_pose = synthetic_step.pose_j.inverse() * pose;
     vio_edge.num_matches = 100;
     optimizer.AddKeyframe(vio_edge, no_edge);
 
@@ -118,6 +159,7 @@ TEST(TightlyCoupledOptimizer, InitializesFromSyntheticImuWindowAndRecoversVeloci
   ASSERT_TRUE(optimizer.IsInitialized());
   EXPECT_NEAR((optimizer.Gravity() - true_gravity).norm(), 0.0, 1e-2);
   EXPECT_NEAR((optimizer.StateOf(kWindow - 1).velocity - velocity).norm(), 0.0, 1e-1);
+  EXPECT_LT((optimizer.StateOf(kWindow - 1).pose.translation() - pose.translation()).norm(), 5e-2);
 }
 
 // Once initialized, a confident IMU factor should pull the estimate toward
@@ -155,7 +197,7 @@ TEST(TightlyCoupledOptimizer, ImuFactorCorrectsAWeakPoseEdgeAfterInitialization)
 
     TightlyCoupledOptimizer::EdgeMeasurement vio_edge;
     vio_edge.valid = true;
-    vio_edge.relative_pose = pose.inverse() * synthetic_step.pose_j;
+    vio_edge.relative_pose = synthetic_step.pose_j.inverse() * pose;
     vio_edge.num_matches = 100;
     optimizer.AddKeyframe(vio_edge, no_edge);
 
@@ -181,15 +223,15 @@ TEST(TightlyCoupledOptimizer, ImuFactorCorrectsAWeakPoseEdgeAfterInitialization)
 
   TightlyCoupledOptimizer::EdgeMeasurement bad_vio_edge;
   bad_vio_edge.valid = true;
-  Sophus::SE3d wrong_relative = pose.inverse() * final_step.pose_j;
-  wrong_relative.translation() += Eigen::Vector3d(0.0, 2.0, 0.0);  // way off, e.g. bad match
-  bad_vio_edge.relative_pose = wrong_relative;
+  Sophus::SE3d wrong_motion = pose.inverse() * final_step.pose_j;
+  wrong_motion.translation() += Eigen::Vector3d(0.0, 2.0, 0.0);  // way off, e.g. bad match
+  bad_vio_edge.relative_pose = wrong_motion.inverse();
   bad_vio_edge.num_matches = 1;  // low weight
 
   const NavNodeId last_id = optimizer.AddKeyframe(bad_vio_edge, no_edge);
 
   // What the bad VIO edge alone (no IMU factor) would have pulled toward.
-  const Eigen::Vector3d bad_edge_only_target = (pose * wrong_relative).translation();
+  const Eigen::Vector3d bad_edge_only_target = (pose * wrong_motion).translation();
 
   const double dist_to_imu_truth =
       (optimizer.StateOf(last_id).pose.translation() - final_step.pose_j.translation()).norm();

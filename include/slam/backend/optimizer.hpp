@@ -19,7 +19,7 @@ class SlidingWindowOptimizer {
  public:
   struct EdgeMeasurement {
     bool valid{false};
-    Sophus::SE3d relative_pose;  // previous keyframe frame -> this keyframe frame
+    Sophus::SE3d relative_pose;  // p_this = relative_pose * p_previous (frontends' convention)
     int num_matches{0};          // inliers (VIO) or correspondences (LiDAR)
   };
 

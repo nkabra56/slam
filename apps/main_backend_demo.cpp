@@ -36,7 +36,9 @@ int main(int argc, char** argv) {
       if (const auto mapping = slam::sensors::LookupRawDriveMapping(sequence_name)) {
         const std::filesystem::path oxts_dir =
             *raw_kitti_root / mapping->date / (mapping->drive + "_sync") / "oxts";
-        oxts_reader.emplace(oxts_dir, mapping->start_frame);
+        oxts_reader.emplace(oxts_dir, mapping->start_frame,
+                            slam::sensors::LoadImuToCamera(*raw_kitti_root, mapping->date,
+                                                           reader.LoadLidarToCamera()));
         std::cout << "Loaded IMU from " << oxts_dir << " (start_frame=" << mapping->start_frame
                   << ")\n";
       } else {

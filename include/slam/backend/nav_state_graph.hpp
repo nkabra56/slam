@@ -74,6 +74,7 @@ class NavStateGraph {
   std::vector<bool> fixed_;
   std::vector<NavPoseEdge> pose_edges_;
   std::vector<NavImuEdge> imu_edges_;
+  // z-up placeholder; in the camera-frame world gravity is ~(0, +9.8, 0), so callers SetGravity().
   Eigen::Vector3d gravity_{0.0, 0.0, -9.81};
 };
 

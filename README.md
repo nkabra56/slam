@@ -70,12 +70,19 @@ sequence-to-drive table), and lay it out as:
 data/
   raw/
     2011_10_03/
+      calib_imu_to_velo.txt
       2011_10_03_drive_0027_sync/
         oxts/
           data/
           timestamps.txt
     ...
 ```
+
+`calib_imu_to_velo.txt` comes from that date's calibration download
+(`2011_10_03_calib.zip`, extracted into `raw/`). The IMU's axes differ from the
+camera's, so the demos compose it with `calib.txt`'s `Tr` and refuse to run
+without it. `slam_tightly_coupled_demo` prints the solved gravity, which should
+read about `(0, +9.8, 0)` (camera y points down).
 
 Pass that `raw/` root as `slam_backend_demo`'s third argument to enable it.
 

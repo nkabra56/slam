@@ -38,8 +38,9 @@ class LidarFrontend {
   Eigen::Isometry3d lidar_to_camera_;
   ScanFeatures previous_features_;
   bool has_previous_scan_{false};
-  // Constant-velocity seed for MatchScans's initial guess.
+  // Constant-velocity seed for MatchScans's initial guess; valid once a match succeeds.
   Sophus::SE3d last_relative_pose_;
+  bool has_motion_prior_{false};
 };
 
 }  // namespace slam::frontend_lidar

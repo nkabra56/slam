@@ -155,9 +155,9 @@ full-density map fed from raw scans is a reasonable future enhancement.
 - [x] `slam_eval_demo`: runs VIO-only, LiDAR-only, fused-incremental, and
       fused-globally-optimized trajectories over a sequence and prints all
       four metrics side by side
-- [ ] Comparison table vs. published LOAM/ORB-SLAM3 numbers in the README
-      — requires a downloaded sequence and a real `slam_eval_demo` run;
-      see README.md's Evaluation section for the template.
+- [x] Real `slam_eval_demo` run against KITTI sequence 04 — see README.md's
+      Results section
+- [ ] Comparison vs. published LOAM/ORB-SLAM3 numbers for the same sequence
 
 ## Phase 6 — Tightly-coupled fusion + ROS2
 

@@ -19,7 +19,7 @@ the source of truth for whether the project compiles and passes tests.
 - [x] Repo structure, CMake + vcpkg manifest
 - [x] `slam::common` data types (`ImageFrame`, `ImuMeasurement`, `LidarScan`)
 - [x] KITTI odometry sequence reader (images, Velodyne scans, ground-truth poses) + unit tests
-- [ ] Download a KITTI odometry sequence locally and run `slam_kitti_demo` against it
+- [x] Download a KITTI odometry sequence locally and run `slam_kitti_demo` against it
 
 ## Phase 1 — VIO front-end
 - [x] Feature detection + KLT tracking across frames (`FeatureTracker`)
@@ -223,3 +223,11 @@ ROS2 library surfaces (`rclcpp`, `message_filters`, `tf2_ros`,
 `cv_bridge`) into a running node; it's the least build-verified file in
 this repository — build and run it against a real ROS2 install before
 trusting it.
+
+## Python bindings (`bindings/`) — early, no phase yet
+
+`slam_py.cpp` only wraps `KittiSequenceReader`'s read-only accessors
+(`num_frames`, `timestamp_at`, `has_ground_truth`); none of the frontends,
+backend, or mapping are exposed. Not yet substantial enough for its own
+phase — grows once there's a concrete use for driving the pipeline from
+Python (e.g. plotting, notebook-driven experimentation).

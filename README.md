@@ -1,10 +1,10 @@
 # slam
 
-A LiDAR + visual-inertial SLAM system built from scratch in C++, with Python
-bindings, meant as the foundation for a larger robotics project rather than a
-one-off demo. Front-ends and the backend optimizer are hand-implemented
-instead of wrapping an existing SLAM framework. See [ROADMAP.md](ROADMAP.md)
-for the module-by-module build plan and current status.
+A LiDAR + visual-inertial SLAM system built from scratch in C++, meant as
+the foundation for a larger robotics project rather than a one-off demo.
+Front-ends and the backend optimizer are hand-implemented instead of
+wrapping an existing SLAM framework. See [ROADMAP.md](ROADMAP.md) for the
+module-by-module build plan and current status.
 
 ## Results
 
@@ -40,7 +40,8 @@ backend/         hand-written sliding-window BA + pose-graph optimization,
                  shared by both frontends, with loop closure
 mapping/         sparse landmark map (VIO) + voxel map (LiDAR), PLY export
 viz/             Pangolin live trajectory/map viewer (opt-in, SLAM_BUILD_VIZ)
-bindings/        pybind11 Python bindings over slam_core
+bindings/        pybind11 skeleton (KittiSequenceReader only, not yet the
+                 frontends/backend) -- see ROADMAP.md
 eval/            ATE + KITTI-protocol RPE scoring against ground truth
 ```
 

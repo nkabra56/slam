@@ -56,6 +56,10 @@ LidarFrontend::FrameResult LidarFrontend::ProcessScan(const LidarScan& scan) {
       result.num_planar_correspondences = match->num_planar_correspondences;
       result.has_pose = true;
       last_relative_pose_ = match->pose;
+    } else {
+      // Drop the stale seed so the next no-prior call actually searches around
+      // identity, matching this function's widened-radius assumption.
+      last_relative_pose_ = Sophus::SE3d();
     }
   }
 

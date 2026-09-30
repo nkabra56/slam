@@ -52,6 +52,13 @@ TEST(LidarFrontend, RecoversALargeFirstMotionWithoutAPrior) {
   ASSERT_TRUE(result.has_pose);
   // p_curr = relative_pose * p_prev, so a sensor that moved +1.5m in x reports -1.5m.
   EXPECT_NEAR(result.relative_pose.translation().x(), -1.5, 0.05);
+  // A single wall only truly constrains x; y/z/rotation get weak gradient at
+  // best (from the scan's finite azimuth/ring extent), so this is a loose
+  // bound -- cheap insurance against a grossly broken Jacobian, not a tight
+  // convergence check like the x assertion above.
+  EXPECT_NEAR(result.relative_pose.translation().y(), 0.0, 0.4);
+  EXPECT_NEAR(result.relative_pose.translation().z(), 0.0, 0.4);
+  EXPECT_LT(result.relative_pose.so3().log().norm(), 0.4);
 }
 
 TEST(LidarFrontend, MovesFeaturesIntoTheCameraFrame) {

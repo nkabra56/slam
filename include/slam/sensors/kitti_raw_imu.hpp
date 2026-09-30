@@ -32,11 +32,12 @@ Eigen::Isometry3d LoadImuToCamera(const std::filesystem::path& raw_root, const s
 
 // Reads IMU from oxts/. Uses body-frame ax,ay,az/wx,wy,wz, not the
 // gravity-leveled af,al,au/wf,wl,wu fields. Measurements are rotated by `imu_to_camera`
-// into the camera frame (lever arm ignored); the identity default is for tests only.
+// into the camera frame (lever arm ignored); pass Identity() explicitly in
+// tests that don't exercise rotation -- there is no default.
 class KittiOxtsReader {
  public:
-  explicit KittiOxtsReader(const std::filesystem::path& oxts_dir, std::size_t start_frame = 0,
-                            Eigen::Isometry3d imu_to_camera = Eigen::Isometry3d::Identity());
+  explicit KittiOxtsReader(const std::filesystem::path& oxts_dir, std::size_t start_frame,
+                            Eigen::Isometry3d imu_to_camera);
 
   std::size_t NumMeasurements() const;
   ImuMeasurement MeasurementAt(std::size_t index) const;

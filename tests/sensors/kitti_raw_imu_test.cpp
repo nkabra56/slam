@@ -50,7 +50,7 @@ class KittiOxtsReaderTest : public ::testing::Test {
 };
 
 TEST_F(KittiOxtsReaderTest, ReadsAccelAndGyroFromBodyFrameFields) {
-  KittiOxtsReader reader(oxts_dir_);
+  KittiOxtsReader reader(oxts_dir_, 0, Eigen::Isometry3d::Identity());
   ASSERT_EQ(reader.NumMeasurements(), 4u);
 
   const ImuMeasurement m = reader.MeasurementAt(2);
@@ -83,20 +83,21 @@ TEST_F(KittiOxtsReaderTest, RotatesMeasurementsIntoTheCameraFrameIgnoringTheLeve
 }
 
 TEST_F(KittiOxtsReaderTest, TimestampsAreRelativeToStartFrame) {
-  KittiOxtsReader reader(oxts_dir_);
+  KittiOxtsReader reader(oxts_dir_, 0, Eigen::Isometry3d::Identity());
   EXPECT_NEAR(reader.MeasurementAt(0).timestamp, 0.0, 1e-6);
   EXPECT_NEAR(reader.MeasurementAt(2).timestamp, 0.2, 1e-6);
 }
 
 TEST_F(KittiOxtsReaderTest, StartFrameOffsetsIndexingAndZeroesTimestamp) {
-  KittiOxtsReader reader(oxts_dir_, /*start_frame=*/2);
+  KittiOxtsReader reader(oxts_dir_, /*start_frame=*/2, Eigen::Isometry3d::Identity());
   ASSERT_EQ(reader.NumMeasurements(), 2u);
   EXPECT_NEAR(reader.MeasurementAt(0).timestamp, 0.0, 1e-6);
   EXPECT_DOUBLE_EQ(reader.MeasurementAt(0).linear_acceleration.x(), 3.0);  // raw frame 2's ax
 }
 
 TEST_F(KittiOxtsReaderTest, ThrowsWhenStartFrameBeyondEnd) {
-  EXPECT_THROW(KittiOxtsReader(oxts_dir_, /*start_frame=*/10), std::runtime_error);
+  EXPECT_THROW(KittiOxtsReader(oxts_dir_, /*start_frame=*/10, Eigen::Isometry3d::Identity()),
+               std::runtime_error);
 }
 
 class LoadImuToCameraTest : public ::testing::Test {
@@ -134,6 +135,12 @@ TEST_F(LoadImuToCameraTest, ThrowsWhenTheCalibrationFileIsMissing) {
 
 TEST_F(LoadImuToCameraTest, ThrowsWhenTranslationIsMissing) {
   WriteCalib("R: 1 0 0 0 1 0 0 0 1\n");
+  EXPECT_THROW(LoadImuToCamera(raw_root_, "2011_10_03", Eigen::Isometry3d::Identity()),
+               std::runtime_error);
+}
+
+TEST_F(LoadImuToCameraTest, ThrowsWhenRotationIsMissing) {
+  WriteCalib("T: 1 2 3\n");
   EXPECT_THROW(LoadImuToCamera(raw_root_, "2011_10_03", Eigen::Isometry3d::Identity()),
                std::runtime_error);
 }

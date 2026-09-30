@@ -261,11 +261,11 @@ velocity once IMU-based initialization succeeds partway through a run
 (zero before that, the same as without an IMU at all).
 
 **Before trusting this**: `slam_node.cpp` combines several ROS2 library
-APIs (`rclcpp`, `message_filters`, `tf2_ros`, `cv_bridge`) and is the
-least build-verified file in this repository — build and run it against a
-real ROS2 install before relying on it. `message_adapters.hpp/.cpp` (the
-ROS-message ↔ `slam_core`-struct conversions) are pure, unit-tested
-functions with meaningfully more confidence than `slam_node.cpp`.
+APIs (`rclcpp`, `message_filters`, `tf2_ros`, `cv_bridge`). It builds
+cleanly and `message_adapters`' unit tests (8/8) pass against a real
+ROS2 Humble install (verified via the Docker build below), but it has
+never been run against a live ROS2 graph or real sensor data — do that
+before relying on it in practice.
 
 **Easiest path — Docker**, no local ROS2 install needed:
 

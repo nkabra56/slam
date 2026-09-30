@@ -220,9 +220,10 @@ functions, unit-tested with hand-built messages
 frame-conversion matrix against its own defining property — comparable
 confidence to the rest of this project. `slam_node.*` combines multiple
 ROS2 library surfaces (`rclcpp`, `message_filters`, `tf2_ros`,
-`cv_bridge`) into a running node; it's the least build-verified file in
-this repository — build and run it against a real ROS2 install before
-trusting it.
+`cv_bridge`) into a running node; the whole package builds and its 8
+unit tests pass against real ROS2 Humble (verified via the Docker
+`ros2` target), but `slam_node.*` itself has never been run against a
+live ROS2 graph or real sensor data — do that before trusting it.
 
 ## Python bindings (`bindings/`) — early, no phase yet
 

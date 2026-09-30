@@ -36,7 +36,8 @@ source raw drive + start frame (the official devkit's sequence-to-raw
 table). `slam_backend_demo` wires it in when given a raw dataset root as
 a third argument, feeding real body-frame accel/gyro
 (`ax,ay,az`/`wx,wy,wz` — not the roll/pitch-leveled `af,al,au`/`wf,wl,wu`
-fields) into `VioFrontend::ProcessImu` each frame.
+fields), rotated into the camera frame via the IMU-to-camera extrinsic, into
+`VioFrontend::ProcessImu` each frame.
 
 The backend (`SlidingWindowOptimizer::AddKeyframe`) consumes the
 resulting preintegrated delta as a pose-graph edge — rotation only. Gyro

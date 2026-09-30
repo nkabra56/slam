@@ -9,6 +9,7 @@ namespace slam {
 
 using TimestampSec = double;
 
+// Axes must match the pose frame (camera optical: x-right, y-down, z-forward).
 struct ImuMeasurement {
   TimestampSec timestamp{};
   Eigen::Vector3d angular_velocity{Eigen::Vector3d::Zero()};

@@ -1,5 +1,7 @@
 #include "slam/frontend_lidar/scan_matcher.hpp"
 
+#include <cmath>
+
 #include <Eigen/Dense>
 
 #include "slam/frontend_lidar/kdtree.hpp"
@@ -93,10 +95,19 @@ std::optional<ScanMatchResult> MatchScans(const ScanFeatures& source, const Scan
       n /= n_norm;
 
       const double e = n.dot(p_target - a);
-      const Eigen::Matrix<double, 1, 6> de_dxi = n.transpose() * PointJacobian(R, p_source);
+      // Tukey-style taper against the gate distance itself (not a fixed cutoff
+      // like edges use): a plane's normal can be nearly parallel to a large
+      // first-motion offset, so a fixed small cutoff would reject every point
+      // on a cold-start's widened search before the pose has had a chance to
+      // converge. Scaling with the gate still down-weights a distant,
+      // likely-wrong match relative to a close one within that same gate.
+      const double distance_ratio = std::abs(e) / params.max_planar_correspondence_dist;
+      const double row_scale = 1.0 - distance_ratio * distance_ratio;
+      const Eigen::Matrix<double, 1, 6> de_dxi =
+          row_scale * n.transpose() * PointJacobian(R, p_source);
 
       jacobian_rows.push_back(de_dxi);
-      residual_rows.push_back(e);
+      residual_rows.push_back(row_scale * e);
       ++num_planar;
     }
 

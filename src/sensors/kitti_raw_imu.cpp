@@ -77,8 +77,52 @@ std::optional<KittiRawDriveMapping> LookupRawDriveMapping(const std::string& seq
   return std::nullopt;
 }
 
-KittiOxtsReader::KittiOxtsReader(const std::filesystem::path& oxts_dir, std::size_t start_frame)
-    : oxts_dir_(oxts_dir), start_frame_(start_frame) {
+Eigen::Isometry3d LoadImuToCamera(const std::filesystem::path& raw_root, const std::string& date,
+                                   const Eigen::Isometry3d& lidar_to_camera) {
+  const std::filesystem::path path = raw_root / date / "calib_imu_to_velo.txt";
+  std::ifstream file(path);
+  if (!file.is_open()) {
+    throw std::runtime_error(
+        "LoadImuToCamera: could not open " + path.string() +
+        ". Extract KITTI's raw " + date + "_calib.zip into the raw data root to get it.");
+  }
+
+  std::optional<Eigen::Matrix3d> rotation;
+  std::optional<Eigen::Vector3d> translation;
+  std::string line;
+  while (std::getline(file, line)) {
+    std::istringstream iss(line);
+    std::string label;
+    iss >> label;
+    if (label == "R:") {
+      Eigen::Matrix3d r = Eigen::Matrix3d::Zero();
+      for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 3; ++col) iss >> r(row, col);
+      }
+      if (!iss) throw std::runtime_error("LoadImuToCamera: malformed R: line in " + path.string());
+      rotation = r;
+    } else if (label == "T:") {
+      Eigen::Vector3d t = Eigen::Vector3d::Zero();
+      iss >> t.x() >> t.y() >> t.z();
+      if (!iss) throw std::runtime_error("LoadImuToCamera: malformed T: line in " + path.string());
+      translation = t;
+    }
+  }
+  if (!rotation.has_value() || !translation.has_value()) {
+    throw std::runtime_error("LoadImuToCamera: missing R/T in " + path.string());
+  }
+
+  Eigen::Isometry3d imu_to_lidar = Eigen::Isometry3d::Identity();
+  imu_to_lidar.linear() = *rotation;
+  imu_to_lidar.translation() = *translation;
+  return lidar_to_camera * imu_to_lidar;
+}
+
+KittiOxtsReader::KittiOxtsReader(const std::filesystem::path& oxts_dir, std::size_t start_frame,
+                                  Eigen::Isometry3d imu_to_camera)
+    : oxts_dir_(oxts_dir),
+      start_frame_(start_frame),
+      imu_to_camera_rotation_(imu_to_camera.linear()) {
   const std::filesystem::path timestamps_path = oxts_dir_ / "timestamps.txt";
   std::ifstream file(timestamps_path);
   if (!file.is_open()) {
@@ -125,8 +169,10 @@ ImuMeasurement KittiOxtsReader::MeasurementAt(std::size_t index) const {
   // Fields 11-13/17-19 are ax,ay,az/wx,wy,wz -- see the class doc comment.
   ImuMeasurement measurement;
   measurement.timestamp = timestamps_.at(index);
-  measurement.linear_acceleration = Eigen::Vector3d(fields[11], fields[12], fields[13]);
-  measurement.angular_velocity = Eigen::Vector3d(fields[17], fields[18], fields[19]);
+  measurement.linear_acceleration =
+      imu_to_camera_rotation_ * Eigen::Vector3d(fields[11], fields[12], fields[13]);
+  measurement.angular_velocity =
+      imu_to_camera_rotation_ * Eigen::Vector3d(fields[17], fields[18], fields[19]);
   return measurement;
 }
 

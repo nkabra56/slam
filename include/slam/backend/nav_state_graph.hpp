@@ -56,7 +56,10 @@ class NavStateGraph {
   void SetState(NavNodeId id, const NavState& state);
   std::size_t NumNodes() const;
 
-  void SetGravity(const Eigen::Vector3d& gravity) { gravity_ = gravity; }
+  void SetGravity(const Eigen::Vector3d& gravity) {
+    gravity_ = gravity;
+    gravity_set_ = true;
+  }
   const Eigen::Vector3d& Gravity() const { return gravity_; }
 
   int Solve() { return Solve(SolveParams{}); }
@@ -74,7 +77,10 @@ class NavStateGraph {
   std::vector<bool> fixed_;
   std::vector<NavPoseEdge> pose_edges_;
   std::vector<NavImuEdge> imu_edges_;
+  // z-up placeholder; in the camera-frame world gravity is ~(0, +9.8, 0). Wrong
+  // in that frame until SetGravity() is called, which AddImuEdge() requires.
   Eigen::Vector3d gravity_{0.0, 0.0, -9.81};
+  bool gravity_set_{false};
 };
 
 }  // namespace slam::backend

@@ -19,6 +19,7 @@ namespace slam_ros2 {
 // ROS2 runtime state -- unit-testable by hand-building messages.
 
 slam::ImageFrame ToImageFrame(const sensor_msgs::msg::Image& msg);
+// Rotates from ROS REP-103 body frame into optical frame (see OpticalToBaseRotation).
 slam::ImuMeasurement ToImuMeasurement(const sensor_msgs::msg::Imu& msg);
 slam::LidarScan ToLidarScan(const sensor_msgs::msg::PointCloud2& msg);
 

@@ -6,7 +6,9 @@
 namespace slam_ros2 {
 namespace {
 
-TEST(ToImuMeasurement, CopiesFieldsCorrectly) {
+// base(x,y,z)=(forward,left,up) = optical(z,-x,-y), so base->optical is
+// optical = (-y_base, -z_base, x_base) -- the inverse of OpticalToBaseRotation.
+TEST(ToImuMeasurement, RotatesFieldsFromBaseIntoOpticalFrame) {
   sensor_msgs::msg::Imu msg;
   msg.header.stamp.sec = 10;
   msg.header.stamp.nanosec = 500000000;
@@ -20,9 +22,12 @@ TEST(ToImuMeasurement, CopiesFieldsCorrectly) {
   const slam::ImuMeasurement measurement = ToImuMeasurement(msg);
 
   EXPECT_NEAR(measurement.timestamp, 10.5, 1e-9);
-  EXPECT_NEAR(measurement.angular_velocity.x(), 0.1, 1e-9);
-  EXPECT_NEAR(measurement.angular_velocity.z(), 0.3, 1e-9);
-  EXPECT_NEAR(measurement.linear_acceleration.z(), 3.0, 1e-9);
+  EXPECT_NEAR(measurement.angular_velocity.x(), -0.2, 1e-9);
+  EXPECT_NEAR(measurement.angular_velocity.y(), -0.3, 1e-9);
+  EXPECT_NEAR(measurement.angular_velocity.z(), 0.1, 1e-9);
+  EXPECT_NEAR(measurement.linear_acceleration.x(), -2.0, 1e-9);
+  EXPECT_NEAR(measurement.linear_acceleration.y(), -3.0, 1e-9);
+  EXPECT_NEAR(measurement.linear_acceleration.z(), 1.0, 1e-9);
 }
 
 TEST(ToLidarScan, ParsesXyzIntensityFields) {

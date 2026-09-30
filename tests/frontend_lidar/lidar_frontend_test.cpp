@@ -23,6 +23,44 @@ LidarScan MakeSingleRingWithCorner() {
   return scan;
 }
 
+// A flat wall 10m ahead of a level, x-forward sensor at `sensor_x`, seen by 24 rings
+// over +-30 degrees of azimuth. A wall fully constrains forward motion.
+LidarScan MakeWallScan(double sensor_x) {
+  constexpr double kWallX = 10.0;
+  LidarScan scan;
+  for (int ring = 40; ring < 64; ++ring) {
+    const double elevation = (-24.8 + (ring + 0.5) * 26.8 / 64) * kPi / 180.0;
+    for (double azimuth_deg = -30.0; azimuth_deg <= 30.0; azimuth_deg += 0.25) {
+      const double azimuth = azimuth_deg * kPi / 180.0;
+      const Eigen::Vector3d d(std::cos(elevation) * std::cos(azimuth),
+                              std::cos(elevation) * std::sin(azimuth), std::sin(elevation));
+      const Eigen::Vector3d p = ((kWallX - sensor_x) / d.x()) * d;
+      scan.points.push_back(
+          {static_cast<float>(p.x()), static_cast<float>(p.y()), static_cast<float>(p.z()), 0.0f});
+    }
+  }
+  return scan;
+}
+
+// A highway-speed first step (1.5m) exceeds the 1m correspondence radius, and
+// there is no motion prior yet, so the frontend must search wider on this match.
+TEST(LidarFrontend, RecoversALargeFirstMotionWithoutAPrior) {
+  LidarFrontend frontend;
+  frontend.ProcessScan(MakeWallScan(0.0));
+  const auto result = frontend.ProcessScan(MakeWallScan(1.5));
+
+  ASSERT_TRUE(result.has_pose);
+  // p_curr = relative_pose * p_prev, so a sensor that moved +1.5m in x reports -1.5m.
+  EXPECT_NEAR(result.relative_pose.translation().x(), -1.5, 0.05);
+  // A single wall only truly constrains x; y/z/rotation get weak gradient at
+  // best (from the scan's finite azimuth/ring extent), so this is a loose
+  // bound -- cheap insurance against a grossly broken Jacobian, not a tight
+  // convergence check like the x assertion above.
+  EXPECT_NEAR(result.relative_pose.translation().y(), 0.0, 0.4);
+  EXPECT_NEAR(result.relative_pose.translation().z(), 0.0, 0.4);
+  EXPECT_LT(result.relative_pose.so3().log().norm(), 0.4);
+}
+
 TEST(LidarFrontend, MovesFeaturesIntoTheCameraFrame) {
   Eigen::Isometry3d lidar_to_camera = Eigen::Isometry3d::Identity();
   lidar_to_camera.linear() =

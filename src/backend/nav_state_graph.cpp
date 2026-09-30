@@ -1,6 +1,7 @@
 #include "slam/backend/nav_state_graph.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 #include <utility>
 
 namespace slam::backend {
@@ -17,7 +18,12 @@ NavNodeId NavStateGraph::AddNode(const NavState& initial_state) {
 
 void NavStateGraph::AddPoseEdge(NavPoseEdge edge) { pose_edges_.push_back(std::move(edge)); }
 
-void NavStateGraph::AddImuEdge(NavImuEdge edge) { imu_edges_.push_back(std::move(edge)); }
+void NavStateGraph::AddImuEdge(NavImuEdge edge) {
+  if (!gravity_set_) {
+    throw std::runtime_error("NavStateGraph::AddImuEdge: SetGravity() must be called first");
+  }
+  imu_edges_.push_back(std::move(edge));
+}
 
 void NavStateGraph::FixNode(NavNodeId id) { fixed_.at(id) = true; }
 

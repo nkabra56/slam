@@ -50,7 +50,7 @@ class KittiOxtsReaderTest : public ::testing::Test {
 };
 
 TEST_F(KittiOxtsReaderTest, ReadsAccelAndGyroFromBodyFrameFields) {
-  KittiOxtsReader reader(oxts_dir_);
+  KittiOxtsReader reader(oxts_dir_, 0, Eigen::Isometry3d::Identity());
   ASSERT_EQ(reader.NumMeasurements(), 4u);
 
   const ImuMeasurement m = reader.MeasurementAt(2);
@@ -62,21 +62,87 @@ TEST_F(KittiOxtsReaderTest, ReadsAccelAndGyroFromBodyFrameFields) {
   EXPECT_NEAR(m.angular_velocity.z(), 2.3, 1e-9);
 }
 
+// cam = (-imu_y, -imu_z, imu_x): IMU x-forward/y-left/z-up to camera z-forward/x-right/y-down.
+Eigen::Isometry3d MakeImuToCamera() {
+  Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
+  transform.linear() << 0, -1, 0, 0, 0, -1, 1, 0, 0;
+  transform.translation() = Eigen::Vector3d(0.5, 0.6, 0.7);
+  return transform;
+}
+
+TEST_F(KittiOxtsReaderTest, RotatesMeasurementsIntoTheCameraFrameIgnoringTheLeverArm) {
+  KittiOxtsReader reader(oxts_dir_, 0, MakeImuToCamera());
+
+  const ImuMeasurement m = reader.MeasurementAt(2);  // raw accel (3,4,5), gyro (2.1,2.2,2.3)
+  EXPECT_NEAR(m.linear_acceleration.x(), -4.0, 1e-12);
+  EXPECT_NEAR(m.linear_acceleration.y(), -5.0, 1e-12);
+  EXPECT_NEAR(m.linear_acceleration.z(), 3.0, 1e-12);
+  EXPECT_NEAR(m.angular_velocity.x(), -2.2, 1e-12);
+  EXPECT_NEAR(m.angular_velocity.y(), -2.3, 1e-12);
+  EXPECT_NEAR(m.angular_velocity.z(), 2.1, 1e-12);
+}
+
 TEST_F(KittiOxtsReaderTest, TimestampsAreRelativeToStartFrame) {
-  KittiOxtsReader reader(oxts_dir_);
+  KittiOxtsReader reader(oxts_dir_, 0, Eigen::Isometry3d::Identity());
   EXPECT_NEAR(reader.MeasurementAt(0).timestamp, 0.0, 1e-6);
   EXPECT_NEAR(reader.MeasurementAt(2).timestamp, 0.2, 1e-6);
 }
 
 TEST_F(KittiOxtsReaderTest, StartFrameOffsetsIndexingAndZeroesTimestamp) {
-  KittiOxtsReader reader(oxts_dir_, /*start_frame=*/2);
+  KittiOxtsReader reader(oxts_dir_, /*start_frame=*/2, Eigen::Isometry3d::Identity());
   ASSERT_EQ(reader.NumMeasurements(), 2u);
   EXPECT_NEAR(reader.MeasurementAt(0).timestamp, 0.0, 1e-6);
   EXPECT_DOUBLE_EQ(reader.MeasurementAt(0).linear_acceleration.x(), 3.0);  // raw frame 2's ax
 }
 
 TEST_F(KittiOxtsReaderTest, ThrowsWhenStartFrameBeyondEnd) {
-  EXPECT_THROW(KittiOxtsReader(oxts_dir_, /*start_frame=*/10), std::runtime_error);
+  EXPECT_THROW(KittiOxtsReader(oxts_dir_, /*start_frame=*/10, Eigen::Isometry3d::Identity()),
+               std::runtime_error);
+}
+
+class LoadImuToCameraTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    raw_root_ = fs::temp_directory_path() / "slam_raw_calib_test";
+    fs::remove_all(raw_root_);
+    fs::create_directories(raw_root_ / "2011_10_03");
+  }
+  void TearDown() override { fs::remove_all(raw_root_); }
+
+  void WriteCalib(const std::string& contents) {
+    std::ofstream(raw_root_ / "2011_10_03" / "calib_imu_to_velo.txt") << contents;
+  }
+
+  fs::path raw_root_;
+};
+
+TEST_F(LoadImuToCameraTest, ComposesImuToVelodyneWithTr) {
+  // IMU -> Velodyne: 90 degrees about z (x -> y) plus a translation.
+  WriteCalib("calib_time: 25-May-2012 16:47:16\nR: 0 -1 0 1 0 0 0 0 1\nT: 1 2 3\n");
+  const Eigen::Isometry3d lidar_to_camera = MakeImuToCamera();
+
+  const Eigen::Isometry3d imu_to_camera = LoadImuToCamera(raw_root_, "2011_10_03", lidar_to_camera);
+
+  const Eigen::Vector3d p_imu(1.0, 2.0, 3.0);
+  const Eigen::Vector3d p_velodyne = Eigen::Vector3d(-2.0, 1.0, 3.0) + Eigen::Vector3d(1.0, 2.0, 3.0);
+  EXPECT_LT((imu_to_camera * p_imu - lidar_to_camera * p_velodyne).norm(), 1e-12);
+}
+
+TEST_F(LoadImuToCameraTest, ThrowsWhenTheCalibrationFileIsMissing) {
+  EXPECT_THROW(LoadImuToCamera(raw_root_, "2011_10_03", Eigen::Isometry3d::Identity()),
+               std::runtime_error);
+}
+
+TEST_F(LoadImuToCameraTest, ThrowsWhenTranslationIsMissing) {
+  WriteCalib("R: 1 0 0 0 1 0 0 0 1\n");
+  EXPECT_THROW(LoadImuToCamera(raw_root_, "2011_10_03", Eigen::Isometry3d::Identity()),
+               std::runtime_error);
+}
+
+TEST_F(LoadImuToCameraTest, ThrowsWhenRotationIsMissing) {
+  WriteCalib("T: 1 2 3\n");
+  EXPECT_THROW(LoadImuToCamera(raw_root_, "2011_10_03", Eigen::Isometry3d::Identity()),
+               std::runtime_error);
 }
 
 TEST(LookupRawDriveMapping, FindsKnownSequences) {

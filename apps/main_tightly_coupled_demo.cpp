@@ -36,11 +36,14 @@ int main(int argc, char** argv) {
     }
     const std::filesystem::path oxts_dir =
         raw_kitti_root / mapping->date / (mapping->drive + "_sync") / "oxts";
-    slam::sensors::KittiOxtsReader oxts_reader(oxts_dir, mapping->start_frame);
+    const auto lidar_to_camera = reader.LoadLidarToCamera();
+    slam::sensors::KittiOxtsReader oxts_reader(
+        oxts_dir, mapping->start_frame,
+        slam::sensors::LoadImuToCamera(raw_kitti_root, mapping->date, lidar_to_camera));
     std::cout << "Loaded IMU from " << oxts_dir << " (start_frame=" << mapping->start_frame << ")\n";
 
     slam::frontend_vio::VioFrontend vio(calibration);
-    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, lidar_to_camera);
     slam::backend::TightlyCoupledOptimizer optimizer;
 
     bool announced_init = false;

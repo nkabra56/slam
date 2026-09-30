@@ -95,19 +95,21 @@ Eigen::Isometry3d LoadImuToCamera(const std::filesystem::path& raw_root, const s
     std::string label;
     iss >> label;
     if (label == "R:") {
-      Eigen::Matrix3d r;
+      Eigen::Matrix3d r = Eigen::Matrix3d::Zero();
       for (int row = 0; row < 3; ++row) {
         for (int col = 0; col < 3; ++col) iss >> r(row, col);
       }
-      if (iss) rotation = r;
+      if (!iss) throw std::runtime_error("LoadImuToCamera: malformed R: line in " + path.string());
+      rotation = r;
     } else if (label == "T:") {
-      Eigen::Vector3d t;
+      Eigen::Vector3d t = Eigen::Vector3d::Zero();
       iss >> t.x() >> t.y() >> t.z();
-      if (iss) translation = t;
+      if (!iss) throw std::runtime_error("LoadImuToCamera: malformed T: line in " + path.string());
+      translation = t;
     }
   }
   if (!rotation.has_value() || !translation.has_value()) {
-    throw std::runtime_error("LoadImuToCamera: missing or malformed R/T in " + path.string());
+    throw std::runtime_error("LoadImuToCamera: missing R/T in " + path.string());
   }
 
   Eigen::Isometry3d imu_to_lidar = Eigen::Isometry3d::Identity();

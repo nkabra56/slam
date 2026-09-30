@@ -29,6 +29,7 @@ int main(int argc, char** argv) {
   try {
     const slam::sensors::KittiSequenceReader reader(sequence_dir, poses_file);
     const slam::StereoCalibration calibration = reader.LoadCalibration();
+    const auto lidar_to_camera = reader.LoadLidarToCamera();
 
     std::optional<slam::sensors::KittiOxtsReader> oxts_reader;
     if (raw_kitti_root.has_value()) {
@@ -38,7 +39,7 @@ int main(int argc, char** argv) {
             *raw_kitti_root / mapping->date / (mapping->drive + "_sync") / "oxts";
         oxts_reader.emplace(oxts_dir, mapping->start_frame,
                             slam::sensors::LoadImuToCamera(*raw_kitti_root, mapping->date,
-                                                           reader.LoadLidarToCamera()));
+                                                           lidar_to_camera));
         std::cout << "Loaded IMU from " << oxts_dir << " (start_frame=" << mapping->start_frame
                   << ")\n";
       } else {
@@ -48,7 +49,7 @@ int main(int argc, char** argv) {
     }
 
     slam::frontend_vio::VioFrontend vio(calibration);
-    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, lidar_to_camera);
     slam::backend::SlidingWindowOptimizer optimizer;
 
     for (std::size_t i = 0; i < reader.NumFrames(); ++i) {

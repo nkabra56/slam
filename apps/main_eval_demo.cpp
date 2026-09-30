@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
       return 1;
     }
     const slam::StereoCalibration calibration = reader.LoadCalibration();
+    const auto lidar_to_camera = reader.LoadLidarToCamera();
 
     std::vector<Sophus::SE3d> ground_truth;
     ground_truth.reserve(reader.NumFrames());
@@ -60,7 +61,7 @@ int main(int argc, char** argv) {
     }
 
     slam::frontend_vio::VioFrontend vio(calibration);
-    slam::frontend_lidar::LidarFrontend lidar({}, {}, reader.LoadLidarToCamera());
+    slam::frontend_lidar::LidarFrontend lidar({}, {}, lidar_to_camera);
     slam::backend::SlidingWindowOptimizer optimizer;
 
     std::optional<slam::sensors::KittiOxtsReader> oxts_reader;
@@ -72,7 +73,7 @@ int main(int argc, char** argv) {
             *raw_kitti_root / mapping->date / (mapping->drive + "_sync") / "oxts";
         oxts_reader.emplace(oxts_dir, mapping->start_frame,
                             slam::sensors::LoadImuToCamera(*raw_kitti_root, mapping->date,
-                                                           reader.LoadLidarToCamera()));
+                                                           lidar_to_camera));
         tightly_coupled.emplace();
         std::cout << "Loaded IMU from " << oxts_dir << " (start_frame=" << mapping->start_frame
                   << ") -- also running tightly-coupled fusion.\n";

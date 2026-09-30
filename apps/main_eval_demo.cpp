@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -26,13 +27,25 @@ void PrintRow(const std::string& name, const slam::eval::AbsoluteTrajectoryError
             << kitti.num_segments_evaluated << "\n";
 }
 
+// One "x,y,z\n" row per pose (camera-optical frame), for plotting elsewhere.
+void WriteTrajectoryCsv(const std::filesystem::path& path,
+                        const std::vector<Sophus::SE3d>& trajectory) {
+  std::ofstream file(path);
+  file << "x,y,z\n";
+  for (const auto& pose : trajectory) {
+    const Eigen::Vector3d t = pose.translation();
+    file << t.x() << ',' << t.y() << ',' << t.z() << '\n';
+  }
+}
+
 }  // namespace
 
 // Runs VIO-only, LiDAR-only, and fused trajectories over a KITTI sequence,
 // printing ATE + KITTI odometry error for each.
 int main(int argc, char** argv) {
   if (argc < 3) {
-    std::cerr << "Usage: slam_eval_demo <sequence_dir> <poses_file> [raw_kitti_root]\n";
+    std::cerr << "Usage: slam_eval_demo <sequence_dir> <poses_file> [raw_kitti_root] "
+                 "[trajectory_output_dir]\n";
     return 1;
   }
 
@@ -41,6 +54,12 @@ int main(int argc, char** argv) {
   std::optional<std::filesystem::path> raw_kitti_root;
   if (argc >= 4) {
     raw_kitti_root = std::filesystem::path{argv[3]};
+  }
+  // Dumps every trajectory to <dir>/<name>.csv (x,y,z per pose) when set --
+  // e.g. for plotting a top-down view against ground truth.
+  std::optional<std::filesystem::path> trajectory_output_dir;
+  if (argc >= 5) {
+    trajectory_output_dir = std::filesystem::path{argv[4]};
   }
 
   try {
@@ -153,6 +172,19 @@ int main(int argc, char** argv) {
       for (std::size_t i = 0; i < tightly_coupled->NumKeyframes(); ++i) {
         tightly_coupled_global_trajectory.push_back(tightly_coupled->StateOf(i).pose);
       }
+    }
+
+    if (trajectory_output_dir.has_value()) {
+      std::filesystem::create_directories(*trajectory_output_dir);
+      WriteTrajectoryCsv(*trajectory_output_dir / "ground_truth.csv", ground_truth);
+      WriteTrajectoryCsv(*trajectory_output_dir / "vio_only.csv", vio_trajectory);
+      WriteTrajectoryCsv(*trajectory_output_dir / "lidar_only.csv", lidar_trajectory);
+      WriteTrajectoryCsv(*trajectory_output_dir / "fused_global.csv", fused_global_trajectory);
+      if (tightly_coupled.has_value()) {
+        WriteTrajectoryCsv(*trajectory_output_dir / "tightly_coupled_global.csv",
+                           tightly_coupled_global_trajectory);
+      }
+      std::cout << "Wrote trajectory CSVs to " << *trajectory_output_dir << "\n";
     }
 
     std::cout << "\n"

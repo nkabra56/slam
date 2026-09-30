@@ -27,7 +27,12 @@ Fusing LiDAR with VIO cuts ATE by over 70% versus either sensor alone; the
 tightly-coupled IMU factor gives a further small improvement, and IMU-based
 initialization succeeds partway through this 271-frame sequence.
 
-See "Evaluation" below to reproduce this or run it on another sequence.
+![Estimated vs. ground-truth trajectory and error growth on KITTI sequence 04](docs/trajectory_04.png)
+
+Sequence 04 is a near-straight ~400m highway segment, so the top-down view
+mostly overlaps — the error-vs-distance panel is where fusion's advantage
+actually shows up. It's also a weak test of turns; see "Evaluation" below to
+reproduce this or run it on a sequence with more curvature.
 
 ## Architecture
 
@@ -227,7 +232,16 @@ as a third argument to add two more rows — the tightly-coupled trajectory
 (incremental and globally re-optimized):
 
 ```bash
-./build/apps/slam_eval_demo data/sequences/00 data/poses/00.txt [data/raw]
+./build/apps/slam_eval_demo data/sequences/00 data/poses/00.txt [data/raw] [trajectory_output_dir]
+```
+
+Pass a fourth argument to also dump each trajectory as `<dir>/<name>.csv`
+(`x,y,z` per pose), then plot them with `docs/plot_trajectories.py` (needs
+`matplotlib`) — that's how the plot above was made:
+
+```bash
+./build/apps/slam_eval_demo data/sequences/04 data/poses/04.txt data/raw data/trajectories_04
+python3 docs/plot_trajectories.py data/trajectories_04 docs/trajectory_04.png
 ```
 
 See "Results" above for sequence 04's numbers. Compare a different sequence
@@ -247,11 +261,11 @@ velocity once IMU-based initialization succeeds partway through a run
 (zero before that, the same as without an IMU at all).
 
 **Before trusting this**: `slam_node.cpp` combines several ROS2 library
-APIs (`rclcpp`, `message_filters`, `tf2_ros`, `cv_bridge`) and is the
-least build-verified file in this repository — build and run it against a
-real ROS2 install before relying on it. `message_adapters.hpp/.cpp` (the
-ROS-message ↔ `slam_core`-struct conversions) are pure, unit-tested
-functions with meaningfully more confidence than `slam_node.cpp`.
+APIs (`rclcpp`, `message_filters`, `tf2_ros`, `cv_bridge`). It builds
+cleanly and `message_adapters`' unit tests (8/8) pass against a real
+ROS2 Humble install (verified via the Docker build below), but it has
+never been run against a live ROS2 graph or real sensor data — do that
+before relying on it in practice.
 
 **Easiest path — Docker**, no local ROS2 install needed:
 

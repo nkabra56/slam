@@ -27,7 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 ENV VCPKG_ROOT=/opt/vcpkg
-RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}" \
+# Full clone, not --depth 1: vcpkg.json pins an older builtin-baseline commit
+# that a shallow clone of the current tip can't reach.
+RUN git clone https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}" \
     && "${VCPKG_ROOT}/bootstrap-vcpkg.sh" -disableMetrics
 
 WORKDIR /workspace

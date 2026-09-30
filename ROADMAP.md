@@ -19,7 +19,7 @@ the source of truth for whether the project compiles and passes tests.
 - [x] Repo structure, CMake + vcpkg manifest
 - [x] `slam::common` data types (`ImageFrame`, `ImuMeasurement`, `LidarScan`)
 - [x] KITTI odometry sequence reader (images, Velodyne scans, ground-truth poses) + unit tests
-- [ ] Download a KITTI odometry sequence locally and run `slam_kitti_demo` against it
+- [x] Download a KITTI odometry sequence locally and run `slam_kitti_demo` against it
 
 ## Phase 1 — VIO front-end
 - [x] Feature detection + KLT tracking across frames (`FeatureTracker`)
@@ -155,9 +155,9 @@ full-density map fed from raw scans is a reasonable future enhancement.
 - [x] `slam_eval_demo`: runs VIO-only, LiDAR-only, fused-incremental, and
       fused-globally-optimized trajectories over a sequence and prints all
       four metrics side by side
-- [ ] Comparison table vs. published LOAM/ORB-SLAM3 numbers in the README
-      — requires a downloaded sequence and a real `slam_eval_demo` run;
-      see README.md's Evaluation section for the template.
+- [x] Real `slam_eval_demo` run against KITTI sequence 04 — see README.md's
+      Results section
+- [ ] Comparison vs. published LOAM/ORB-SLAM3 numbers for the same sequence
 
 ## Phase 6 — Tightly-coupled fusion + ROS2
 
@@ -223,3 +223,11 @@ ROS2 library surfaces (`rclcpp`, `message_filters`, `tf2_ros`,
 `cv_bridge`) into a running node; it's the least build-verified file in
 this repository — build and run it against a real ROS2 install before
 trusting it.
+
+## Python bindings (`bindings/`) — early, no phase yet
+
+`slam_py.cpp` only wraps `KittiSequenceReader`'s read-only accessors
+(`num_frames`, `timestamp_at`, `has_ground_truth`); none of the frontends,
+backend, or mapping are exposed. Not yet substantial enough for its own
+phase — grows once there's a concrete use for driving the pipeline from
+Python (e.g. plotting, notebook-driven experimentation).

@@ -1,10 +1,33 @@
 # slam
 
-A LiDAR + visual-inertial SLAM system built from scratch in C++, with Python
-bindings, meant as the foundation for a larger robotics project rather than a
-one-off demo. Front-ends and the backend optimizer are hand-implemented
-instead of wrapping an existing SLAM framework. See [ROADMAP.md](ROADMAP.md)
-for the module-by-module build plan and current status.
+A LiDAR + visual-inertial SLAM system built from scratch in C++, meant as
+the foundation for a larger robotics project rather than a one-off demo.
+Front-ends and the backend optimizer are hand-implemented instead of
+wrapping an existing SLAM framework. See [ROADMAP.md](ROADMAP.md) for the
+module-by-module build plan and current status.
+
+## Results
+
+Measured on [KITTI odometry](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+sequence 04 — real stereo, LiDAR, and IMU data, no synthetic shortcuts. ATE is
+Sturm et al.'s rigid-alignment RMSE; translation/rotation error follow the
+official KITTI odometry protocol (100-800m segments), so these are directly
+comparable to the leaderboard and to published LOAM/ORB-SLAM3 numbers.
+
+| Method                    | ATE (m) | Trans. error (%) | Rot. error (deg/100m) |
+|---------------------------|---------|-------------------|------------------------|
+| VIO-only                  | 1.845   | 1.84              | 1.6979                 |
+| LiDAR-only                | 2.329   | 2.22              | 0.8379                 |
+| Fused (incremental)       | 0.538   | 0.83              | 0.5800                 |
+| Fused (global opt.)       | 0.538   | 0.83              | 0.5800                 |
+| Tightly-coupled (inc.)    | 0.536   | 0.78              | 0.5196                 |
+| Tightly-coupled (global)  | 0.536   | 0.80              | 0.5165                 |
+
+Fusing LiDAR with VIO cuts ATE by over 70% versus either sensor alone; the
+tightly-coupled IMU factor gives a further small improvement, and IMU-based
+initialization succeeds partway through this 271-frame sequence.
+
+See "Evaluation" below to reproduce this or run it on another sequence.
 
 ## Architecture
 
@@ -17,7 +40,8 @@ backend/         hand-written sliding-window BA + pose-graph optimization,
                  shared by both frontends, with loop closure
 mapping/         sparse landmark map (VIO) + voxel map (LiDAR), PLY export
 viz/             Pangolin live trajectory/map viewer (opt-in, SLAM_BUILD_VIZ)
-bindings/        pybind11 Python bindings over slam_core
+bindings/        pybind11 skeleton (KittiSequenceReader only, not yet the
+                 frontends/backend) -- see ROADMAP.md
 eval/            ATE + KITTI-protocol RPE scoring against ground truth
 ```
 
@@ -206,21 +230,10 @@ as a third argument to add two more rows — the tightly-coupled trajectory
 ./build/apps/slam_eval_demo data/sequences/00 data/poses/00.txt [data/raw]
 ```
 
-**This table is a template** — run the command above on a downloaded
-sequence and fill in the top rows; compare against published numbers from
-the [KITTI odometry leaderboard](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
-or the LOAM/ORB-SLAM3 papers for the same sequence.
-
-| Method                      | ATE (m) | Trans. error (%) | Rot. error (deg/100m) |
-|-----------------------------|---------|-------------------|------------------------|
-| VIO-only                    | —       | —                 | —                      |
-| LiDAR-only                  | —       | —                 | —                      |
-| Fused (incremental)         | —       | —                 | —                      |
-| Fused (global opt.)         | —       | —                 | —                      |
-| Tightly-coupled (inc.)      | —       | —                 | —                      |
-| Tightly-coupled (global)    | —       | —                 | —                      |
-| LOAM (published)            | —       | —                 | —                      |
-| ORB-SLAM3 (published)       | —       | —                 | —                      |
+See "Results" above for sequence 04's numbers. Compare a different sequence
+against published figures from the
+[KITTI odometry leaderboard](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+or the LOAM/ORB-SLAM3 papers.
 
 ## Running on ROS2 (experimental)
 
@@ -298,8 +311,7 @@ pose-graph Gauss-Newton optimizer fusing VIO, LiDAR, and IMU-rotation edges
 in a sliding window, plus geometric loop closure), mapping (a
 voxel-accumulated point-cloud map exported to PLY, plus an opt-in Pangolin
 live viewer), and evaluation tooling (ATE + the official KITTI RPE
-protocol) — its comparison table is still a template pending a real run
-against downloaded data.
+protocol) — see "Results" above for real numbers on KITTI sequence 04.
 
 Phase 6 (stretch) is in progress: the full IMU factor and initialization
 (`backend::NavStateGraph`, `backend::InitializeVio`) are wired into a

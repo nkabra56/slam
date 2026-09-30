@@ -25,10 +25,13 @@ slam::ImageFrame ToImageFrame(const sensor_msgs::msg::Image& msg) {
 slam::ImuMeasurement ToImuMeasurement(const sensor_msgs::msg::Imu& msg) {
   slam::ImuMeasurement measurement;
   measurement.timestamp = rclcpp::Time(msg.header.stamp).seconds();
-  measurement.angular_velocity =
-      Eigen::Vector3d(msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z);
-  measurement.linear_acceleration = Eigen::Vector3d(
-      msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z);
+  const Eigen::Matrix3d base_to_optical = OpticalToBaseRotation().transpose();
+  measurement.angular_velocity = base_to_optical * Eigen::Vector3d(msg.angular_velocity.x,
+                                                                     msg.angular_velocity.y,
+                                                                     msg.angular_velocity.z);
+  measurement.linear_acceleration = base_to_optical * Eigen::Vector3d(msg.linear_acceleration.x,
+                                                                        msg.linear_acceleration.y,
+                                                                        msg.linear_acceleration.z);
   return measurement;
 }
 
